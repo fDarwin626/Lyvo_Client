@@ -25,7 +25,7 @@ const Footer = () => {
             <div className="flex justify-center mb-25">
               <button className="bg-white rounded-2xl p-4 shadow-lg hover:scale-105 transition-transform">
                 <div className="flex gap-1">
-                  <p className="font-amiamie font-semibold">lyv</p>
+                  <p className="font-amiamie font-semibold">L.v</p>
                 </div>
               </button>
             </div>
@@ -57,7 +57,7 @@ const Footer = () => {
     {/* Left side - Brand and Copyright */}
     <div className="flex items-center gap-8">
       <h3 className="text-xl font-bold">LYVO</h3>
-      <p className="text-sm text-gray-600">© 2025 YourBrand</p>
+      <p className="text-sm text-gray-600">© 2025 CoCoNuTStudios</p>
     </div>
     
     {/* Right side - Links */}

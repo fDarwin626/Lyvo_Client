@@ -6,6 +6,7 @@ const Hero = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [direction, setDirection] = useState(1); // 1 for forward, -1 for backward
 
   const sliders = [
     {id: 1, image: '/images/hero/automation.jpg', text:'Automate Your Workflow'},
@@ -14,18 +15,33 @@ const Hero = () => {
     {id: 4, image: '/images/hero/success.jpg', text:'Tell a story using Lyvo'},
     {id:5, image: '/images/podcast.jpg', text: "Handle your podcast scrips"},
     {id: 6, image: '/images/audiobook.jpg', text:'Voice over for AudioBooks'},
-
   ]
 
-useEffect(() => {
-  const duration = 3000; // 3 seconds per slide
-  
-  const timer = setTimeout(() => {
-    setCurrentIndex((current) => (current + 1) % sliders.length);
-  }, duration);
-  
-  return () => clearTimeout(timer);
-}, [currentIndex, sliders.length]);
+  useEffect(() => {
+    const duration = 3000; // 3 seconds per slide
+    
+    const timer = setTimeout(() => {
+      setCurrentIndex((current) => {
+        const nextIndex = current + direction;
+        
+        // If we've reached the end, reverse direction
+        if (nextIndex >= sliders.length - 1) {
+          setDirection(-1);
+          return sliders.length - 1;
+        }
+        
+        // If we've reached the beginning, reverse direction
+        if (nextIndex <= 0) {
+          setDirection(1);
+          return 0;
+        }
+        
+        return nextIndex;
+      });
+    }, duration);
+    
+    return () => clearTimeout(timer);
+  }, [currentIndex, direction, sliders.length]);
 
   return (
     <section className="min-h-screen flex flex-col mt-20 overflow-hidden px-4">
@@ -38,7 +54,7 @@ useEffect(() => {
               <div className="absolute transition-all duration-500 ease-out"
               key={slide.id}
               style={{
-                transform: `translateX(${offset * 520}px) scale(${isActive ? 1.2 : 0.85})`,
+                transform: `translateX(${offset * 290}px) scale(${isActive ? 1.2 : 0.85})`,
                 zIndex: sliders.length - Math.abs(offset),
                 opacity: Math.abs(offset) > 2 ? 0 : 1,
               }}
@@ -46,13 +62,13 @@ useEffect(() => {
                   <div className="relative">
                   <img
                     src={slide.image}
-                    className="w-[500px] h-[650px] object-cover mx-4 rounded-lg shadow-2xl"
+                    className="w-[350px] h-[650px] object-cover mx-4 rounded-lg shadow-2xl"
                   />
 
              <div className="absolute bottom-0 left-0 right-0 text-black/25 p-6 mx-4 rounded-b-lg
              text-3xl font-bold tracking-tight"
                >
-              <h1 className="text-3xl">{slide.text}</h1>
+              <h1 className="text-2xl">{slide.text}</h1>
             </div>
          
               </div>    

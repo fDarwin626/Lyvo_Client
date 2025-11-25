@@ -126,3 +126,34 @@ export function isAuthenticated(): boolean {
   return !!getToken();
 }
 
+// ========== TTS API FUNCTIONS ==========
+export interface Voices {
+  id: string;
+  name: string;
+  display_name: string | null;
+  description: string | null;
+  gender: string | null;
+  language: string;
+  is_premium: boolean;
+}
+
+// Get all Voices
+export async function getVoices(): Promise<Voices[]> {
+  const response = await fetch(`${API_BASE_URL}/tts/voices`);
+
+  if(!response.ok) {
+    throw new Error('Failed to fetch voices');
+  }
+  return response.json();
+}
+
+// Get random voices (for dashboard)
+export async function getRandomVoices(count: number = 7): Promise<Voices[]> {
+  const allVoices = await getVoices();
+  
+  // Shuffle array
+  const shuffled = [...allVoices].sort(() => Math.random() - 0.5);
+  
+  // Return first 'count' items
+  return shuffled.slice(0, count);
+}
