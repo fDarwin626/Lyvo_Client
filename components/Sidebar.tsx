@@ -181,7 +181,7 @@ useEffect(() => {
         className={`flex items-center mt-3 ${isCollapsed ? 'justify-center' : 'gap-3'} 
         px-3 py-2 rounded-lg transition-colors ${
           isActive('/dashboard/voices') 
-            ? 'bg-brand text-white' 
+            ? 'bg-gray-100 text-secondary' 
             : 'text-secondary hover:bg-gray-100'
         }`}
       >
@@ -200,10 +200,10 @@ useEffect(() => {
             </p>
           )}          
           <Link 
-            href="/dashboard/text-to-speech"
+            href="\dashboard\generate"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
-              isActive('/dashboard/text-to-speech') 
-                ? 'bg-brand text-white' 
+              isActive('/dashboard/generate') 
+                ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
@@ -296,7 +296,7 @@ useEffect(() => {
           </Link>
 
           {/* Upgrade Button */}
-          <div className="mt-7 px-1 mb-20">
+          <div className="mt-7 px-1 ">
             <button className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-center gap-2 px-4'} py-1 bg-white border border-black rounded-lg hover:bg-gray-800 transition-colors hover:border-[#D4AF37] hover:text-[#D4AF37]`}>
               <Icon icon="fluent:premium-20-regular" width="20" height="20" className="text-[#D4AF37]" />
               {!isCollapsed && <span className="font-medium">Upgrade</span>}

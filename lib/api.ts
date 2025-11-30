@@ -135,6 +135,7 @@ export interface Voices {
   gender: string | null;
   language: string;
   is_premium: boolean;
+  sample_audio_url: string | null;
 }
 
 // Get all Voices
@@ -156,4 +157,114 @@ export async function getRandomVoices(count: number = 7): Promise<Voices[]> {
   
   // Return first 'count' items
   return shuffled.slice(0, count);
+}
+
+
+// ========== AUDIOBOOK API FUNCTIONS ==========
+export interface AudiobookRequest {
+  title: string;
+  author?: string;
+  voice_id: string;  
+}
+
+export interface AudiobookJob {
+  id: string;
+  title: string;
+  status: string;
+  audio_url?: string;
+  duration?: number;
+  created_at: string;
+}
+
+// Generate audiobook
+export async function generateAudiobook(data: AudiobookRequest): Promise<AudiobookJob> {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/tts/audiobook/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    
+    // Handle Pydantic validation errors (array format)
+    if (Array.isArray(error.detail)) {
+      const errorMessage = error.detail[0].msg.replace('Value error, ', '');
+      throw new Error(errorMessage);
+    }
+    
+    // Handle regular string errors
+    throw new Error(error.detail || 'Audiobook generation failed');
+  }
+
+  return response.json();
+}
+
+// Get user's audiobooks
+export async function getUserAudiobooks(): Promise<AudiobookJob[]> {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/tts/audiobook/history`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch audiobooks');
+  }
+
+  return response.json();
+}
+
+
+
+export async function generateAudiobookFromFile(
+  file: File,
+  title: string,
+  author: string | null,
+  voiceId: string
+): Promise<AudiobookJob> {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const formData = new FormData();
+  formData.append('document', file);
+  formData.append('title', title);
+  formData.append('voice_id', voiceId);
+  if (author) {
+    formData.append('author', author);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/tts/audiobook/generate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // DON'T set Content-Type - browser sets it automatically for FormData
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Audiobook generation failed');
+  }
+
+  return response.json();
 }

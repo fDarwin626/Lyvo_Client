@@ -31,7 +31,7 @@ export default function TopBar() {
      bg-background flex items-center justify-between px-6">
      {/* LEFT SIDE - Greeting */}
           <div className="">
-             <p className='text-sm text-secondary mt-3'>My WorkSpace</p>
+             <p className='text-sm text-secondary'>My WorkSpace</p>
             <h2 className={`text-3xl flex font-amiamie items-center gap-2 font-semibold ${timeColors}`}>
              {greeting}<span className='text-primary'>,</span>
              <span className='text-primary'>CoCoNuT</span>

@@ -42,7 +42,7 @@ const Footer = () => {
             </button>
              <p className="text-center text-gray/70 text-sm">
             Already have an account? <Link
-            href="/auth/signin"
+            href="auth/signin"
             className="text-blue-700 hover:underline cursor-pointer"
             >Log in</Link>
             </p>

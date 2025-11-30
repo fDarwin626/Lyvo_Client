@@ -3,22 +3,47 @@ import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import WorkMode from '@/components/WorkMode';
-import { getRandomVoices, Voices } from '@/lib/api';
+import { getRandomVoices, Voices, getVoices } from '@/lib/api';
 import VoiceCard from '@/components/VoiceCard';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AudioPlayer from '@/components/AudioPlayer';
+import TopBar from '@/components/Topbar';
 
 export default function DashboardPage() {
-    const router = useRouter();
+  const router = useRouter();
   const [recentVoices, setRecentVoices] = useState<Voices[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filteredVoices, setFilteredVoices] = useState<Voices[]>([]);
+  const [voices, setVoices] = useState<Voices[]>([]);
 
+  // Audio Player State
+  const [playingVoice, setPlayingVoice] = useState<Voices | null>(null);
+  const [showPlayer, setShowPlayer] = useState(false);
+
+
+    useEffect(() => {
+      async function loadVoices() {
+        try {
+          const data = await getVoices();
+          setVoices(data);
+          setFilteredVoices(data);
+        } catch (error) {
+          console.error('Failed to load voices:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+      
+      loadVoices();
+    }, []);
+  
 
     useEffect(() => {
     // Fetch random voices for "Recent Voices" section
     async function loadVoices() {
       try {
-        const voices = await getRandomVoices(7);
+        const voices = await getRandomVoices(5);
         setRecentVoices(voices);
       } catch (error) {
         console.error('Failed to load voices:', error);
@@ -30,13 +55,21 @@ export default function DashboardPage() {
     loadVoices();
   }, []);
 
-  const handlePlayVoice = (voice: Voices) => {
-    // TODO: Play voice sample (we'll implement this next)
-    alert(`Playing sample for: ${voice.display_name || voice.name}`);
-  };
+const handlePlayVoice = (voice: Voices) => {
+  if (!voice.sample_audio_url) {
+    alert('Sample not available for this voice');
+    return;
+  }
+  
+  setPlayingVoice(voice);
+  setShowPlayer(true);
+};
 
   return (
     <ProtectedRoute>
+      <div className="flex-1 flex flex-col">
+      <TopBar/>
+      </div>
       <div className="max-w-7xl mx-auto mt-15 ">
 
         <div className="mb-4">
@@ -56,7 +89,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
           
           {/* Card 1: Instant Speech */}
-          <Link href="/dashboard/text-to-speech">
+          <Link href="/dashboard/generate">
             <div className="bg-gray-200 rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer">
               {/* Icon illustration container */}
               <div className="relative w-full h-20 mb-6">
@@ -104,7 +137,7 @@ export default function DashboardPage() {
           </Link>
 
 
-          {/* Card 4: ElevenLabs Agents */}
+          {/* Card 4: Lyvo Agents */}
           <Link href="/dashboard/agents">
             <div className="bg-gray-200 rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer">
               <div className="relative w-full h-20 mb-6">
@@ -195,7 +228,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
           )}
-           <Link href="/voices">
+           <Link href="\dashboard\voices">
                 <button className="mt-6 w-50 py-2 border border-gray-300 rounded-full
                  hover:bg-gray-100 transition-colors text-sm font-medium">
                   Explore Library
@@ -254,6 +287,20 @@ export default function DashboardPage() {
               
         </div>
      </div>
+
+
+         {/* ADD THIS - Audio Player (Bottom Floating) */}
+      {showPlayer && playingVoice && playingVoice.sample_audio_url && (
+        <AudioPlayer
+          audioUrl={playingVoice.sample_audio_url}
+          voiceName={playingVoice.display_name || playingVoice.name}
+          onClose={() => {
+            setShowPlayer(false);
+            setPlayingVoice(null);
+          }}
+        />
+      )}
+  
    </ProtectedRoute>
   );
 }
