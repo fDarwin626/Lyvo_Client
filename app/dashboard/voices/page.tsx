@@ -59,8 +59,8 @@ export default function VoicesPage() {
     setPlayingVoice(null);
   };
 
-  const handleUseVoice = (voiceId: string) => {
-    router.push(`generate?voice=${voiceId}`);
+  const handleUseVoice = (voiceId: string, route: string) => {
+    router.push(`${route}?voice=${voiceId}`);
   };
 
   return (
@@ -179,12 +179,21 @@ export default function VoicesPage() {
                         {/* Dropdown Menu */}
                         <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                           <button
-                            onClick={() => handleUseVoice(voice.id)}
+                            onClick={() => handleUseVoice(voice.id, 'generate')}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                           >
                             <Icon icon="material-symbols-light:bolt-outline" width="24" height="24" />
                             Use for TTS
                           </button>
+
+                          <button
+                            onClick={() => handleUseVoice(voice.id, 'audiobook')}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            <Icon icon="arcticons:audiobookshelf" width="24" height="24" />
+                            Use for AudioBook
+                          </button>
+
                           
                           <button
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"

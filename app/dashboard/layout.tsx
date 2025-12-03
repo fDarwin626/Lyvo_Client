@@ -1,7 +1,6 @@
 "use client";
 import { ReactNode } from 'react';
 import Sidebar from '@/components/Sidebar';
-import TopBar from '@/components/Topbar';
 
 
 export default function DashboardLayout({ 

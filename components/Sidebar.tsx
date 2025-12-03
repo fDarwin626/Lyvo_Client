@@ -238,7 +238,7 @@ useEffect(() => {
 
         </div>
 
-        {/* Playground Section */}
+        {/* PRODUCT Section */}
         <div className="mb-6">
           {!isCollapsed && (
             <p ref={(el) => {if (el) sectionsRef.current[1] = el}} className="text-xs font-semibold text-secondary uppercase mb-2 px-3">
@@ -247,9 +247,10 @@ useEffect(() => {
           )}
           <Link 
             href="/dashboard/voice-cloning"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}
+             px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/voice-cloning') 
-                ? 'bg-brand text-white' 
+                ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
@@ -261,7 +262,7 @@ useEffect(() => {
             href="/dashboard/dubbing"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/dubbing') 
-                ? 'bg-brand text-white' 
+                ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
@@ -274,7 +275,7 @@ useEffect(() => {
             href="/dashboard/creators"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/creators') 
-                ? 'bg-brand text-white' 
+                ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
@@ -287,7 +288,7 @@ useEffect(() => {
             href="/dashboard/notifications"
             className={`flex items-center mt-5 ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/notifications') 
-                ? 'bg-brand text-white' 
+                ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >

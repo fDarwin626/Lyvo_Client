@@ -118,8 +118,37 @@
     --border: 226 232 240;
     --shadow: 15 23 42;
   }
-}
 
+
+
+
+  /* DARK MODE - That darkish blueish purple black you want */
+  .dark {
+    /* Backgrounds - Deep blue-purple blacks */
+    --background: 15 15 25;        /* #0f0f19 - Main dark bg */
+    --surface: 20 20 35;           /* #141423 - Sidebar/cards */
+    
+    /* Text colors - Inverted */
+    --text-primary: 240 240 250;   /* Almost white */
+    --text-secondary: 160 160 180; /* Lighter gray */
+    --text-muted: 120 120 140;     /* Muted gray */
+    
+    /* Brand colors - Slightly adjusted for dark mode */
+    --brand-primary: 120 113 255;  /* Brighter indigo */
+    --brand-hover: 140 133 255;    /* Even brighter on hover */
+    --brand-light: 30 30 50;       /* Dark purple tint */
+    
+    /* Accent colors - Boosted for dark mode */
+    --accent-purple: 167 139 250;
+    --accent-blue: 96 165 250;
+    --accent-pink: 244 114 182;
+    
+    /* Borders & Effects */
+    --border: 40 40 60;            /* Subtle dark borders */
+    --shadow: 0 0 0;               /* Black shadows */
+  }
+
+}
 
 
 @layer utilities {

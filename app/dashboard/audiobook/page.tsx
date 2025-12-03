@@ -16,6 +16,7 @@ function GenarateAudiobook () {
   const [loading, setLoading] = useState(true);
   const [filteredVoices, setFilteredVoices] = useState<Voices[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<Voices | null>(null);
+    const searchParams = useSearchParams();
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedAudiobookVoice, setSelectedAudiobookVoice] = useState<Voices | null>(null);
@@ -26,7 +27,7 @@ function GenarateAudiobook () {
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
-  const [completedAudiobook, setCompletedAudiobook] = useState<any>(null);  // ADD THIS LINE
+  const [completedAudiobook, setCompletedAudiobook] = useState<any>(null); 
 
 
 // Add polling function
@@ -75,6 +76,16 @@ useEffect(() => {
       const data = await getVoices();
       setVoices(data);
       setFilteredVoices(data);
+
+         // Check for voice parameter in URL
+        const voiceId = searchParams.get('voice');
+        if (voiceId) {
+          const voice = data.find(v => v.id === voiceId);
+          if (voice) {
+            setSelectedAudiobookVoice(voice);  // Set the voice from URL
+            return;  // Skip setting default
+          }
+        }
       // Set default audiobook voice to first voice (index 0)
       if (data.length > 0) {
         setSelectedAudiobookVoice(data[0]);
@@ -87,7 +98,7 @@ useEffect(() => {
   }
   
   loadVoices();
-}, []);
+}, [searchParams]);
 
         useEffect(() => {
         // Fetch random voices for "Recent Voices" section
@@ -171,7 +182,7 @@ const handleGenerateAudiobook = async () => {
                 <div className="mb-8">
                     <h2 className='text-xl font-medium mb-2 font-amiamie flex flex-row gap-2'>
                         Trending Voices
-                        <Link href={''}><Icon icon="hugeicons:greater-than" 
+                        <Link href='/dashboard/voices'><Icon icon="hugeicons:greater-than" 
                         width="15" height="24"  className="text-gray-500" /></Link>
                     </h2>
                     {loading ? (
@@ -191,11 +202,12 @@ const handleGenerateAudiobook = async () => {
                     <div className="grid grid-cols-3 gap-6">
                         {recentVoices.map((voice) => (
                          <div key={voice.id} className="flex items-start gap-3 p-4
-                          rounded-4xl hover:bg-gray-300 cursor-pointer group">
+                          rounded-4xl hover:bg-gray-100 cursor-pointer group">
 
                             <div 
                               onClick={() => handlePlayVoice(voice)}
-                              className="border p-4 rounded-xl border-gray-200 bg-gray-200 flex-shrink-0 cursor-pointer hover:bg-gray-300 transition-colors"
+                              className="border p-4 rounded-xl border-gray-200 bg-gray-200 flex-shrink-0 cursor-pointer
+                               hover:bg-gray-100 transition-colors"
                             >
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br
                               from-[#43C6AC] to-[#191654]
