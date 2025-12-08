@@ -505,7 +505,7 @@ function VoiceCloningPage () {
 
                 </div>
 
-                {/* ========== EXISTING FEATURES SECTION (UNCHANGED) ========== */}
+                {/* ========== EXISTING FEATURES SECTION ========== */}
                 <div className="max-w-7xl mx-auto px-6 py-3 mt-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         
@@ -743,7 +743,7 @@ function VoiceCloningPage () {
                                       disabled:to-gray-500 disabled:cursor-not-allowed text-white 
                                       font-bold py-5 rounded-xl transition-all shadow-lg text-lg"
                                 >
-                                    {cloning ? "Cloning Your Voice..." : "🎤 Clone My Voice"}
+                                    {cloning ? "Cloning Your Voice..." : " Clone My Voice" } 
                                 </button>
                             </div>
                         </div>

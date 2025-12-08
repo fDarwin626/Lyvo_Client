@@ -33,23 +33,24 @@ const AboutSummary = () => {
 
 <div className="relative w-full h-[500px] mt-10">
   {/* RippleGrid Background */}
-  <div className="absolute inset-0">
-    <RippleGrid
-      enableRainbow={false}
-      gridColor="#3b82f6"
-      rippleIntensity={0.05}
-      gridSize={10}
-      gridThickness={15}
-      mouseInteraction={true}
-      mouseInteractionRadius={1.2}
-      opacity={0.8}
-    />
+  <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+    <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
+      <RippleGrid
+        enableRainbow={false}
+        gridColor="#3b82f6"
+        rippleIntensity={0.05}
+        gridSize={10}
+        gridThickness={15}
+        mouseInteraction={true}
+        mouseInteractionRadius={1.2}
+        opacity={0.8}
+      />
+    </div>
   </div>
 
   {/* Content Overlay */}
   <div className="relative z-10 flex flex-col items-center justify-center h-full px-4">
-    <h1 className="text-5xl md:text-6xl font-medium text-gray-950 mix-blend-soft-light
-     text-center mb-8">
+    <h1 className="text-5xl md:text-6xl font-medium text-gray-950 text-center mb-8">
       Experience our full audio platform,<br />
       Get Started today
     </h1>
@@ -62,7 +63,7 @@ const AboutSummary = () => {
         Get Started
       </button>
       
-      <button className="px-8 py-3 bg-transparent border-2 border-white text-black rounded-full font-semibold hover:bg-white hover:text-black transition">
+      <button className="px-8 py-3 bg-transparent border-2 border-black text-black rounded-full font-semibold hover:bg-black hover:text-white transition">
         Learn More
       </button>
     </div>

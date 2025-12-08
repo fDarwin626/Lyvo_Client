@@ -138,7 +138,7 @@ const handlePlayVoice = (voice: Voices) => {
 
 
           {/* Card 4: Lyvo Agents */}
-          <Link href="/dashboard/agents">
+          <Link href="/dashboard/agent-dashboard">
             <div className="bg-gray-200 rounded-2xl p-6 hover:shadow-md transition-all cursor-pointer">
               <div className="relative w-full h-20 mb-6">
                 <div className="items-center justify-center flex">

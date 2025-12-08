@@ -1,3 +1,5 @@
+import { promises } from "dns";
+
 // ========== CONFIG & TYPES ==========
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const REQUEST_TIMEOUT = 500000; 
@@ -53,6 +55,16 @@ export interface AudiobookJob {
   created_at: string;
 }
 
+export interface TTSHistory {
+  id: string;
+  text: string;
+  voice_name: string;
+  audio_url: string | null;
+  duration: number | null;
+  created_at: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
 export interface ClonedVoice {
   id: string;
   name: string;
@@ -62,6 +74,199 @@ export interface ClonedVoice {
   clones_remaining?: number;
   created_at?: string;
 }
+
+
+// ========== USER BALANCE ==========
+
+export interface UserBalance {
+  balance: number;
+  email: string;
+  is_admin: boolean;
+}
+// ========== SHARE SYSTEM INTERFACES ==========
+export interface CreateShareLinkRequest {
+  share_type: 'password' | 'account_required';
+  password?: string; // required if shared_type is 'password'
+  max_users?: number;
+  expires_in_days?: number;
+}
+
+
+export interface ShareLinkResponse {
+  id: string;
+  share_token: string;
+  shared_type: string;
+  max_users: number 
+  expires_at: string;
+  created_at: string;
+}
+
+export interface ValidateShareRequest {
+  password?: string;
+  email?: string;
+  name?: string;
+}
+
+export interface ShareAccessResponse {
+  success: boolean;
+  agent_id: string;
+  agent_name: string;
+  session_token?: string;
+  message: string;
+}
+
+export interface ShareChatRequest {
+  message: string;
+  audio_enabled?: boolean;
+}
+
+export interface ShareChatResponse {
+  message_id: string;
+  agent_response: string;
+  audio_url: string | null;
+  credits_used: number;
+  owner_balance: number; // ✅ Owner's remaining credits
+  transcribed_text?: string; 
+
+}
+
+export interface ShareUsageStats {
+  share_id: string;
+  share_token: string;
+  share_url: string;
+  share_type: string;
+  is_active: boolean;
+  expires_at: string;
+  created_at: string;
+  total_messages: number;
+  total_credits_used: number;
+  unique_users_count: number;
+  last_used_at: string | null;
+  recent_users: Array<{
+    identifier: string;
+    user_type: string;
+    messages_sent: number;
+    credits_used: number;
+    last_active: string;
+  }>;
+}
+
+export interface ShareListResponse {
+  agent_id: string;
+  agent_name: string;
+  total_shares: number;
+  active_shares: number;
+  shares: ShareUsageStats[];
+}
+
+
+// ========== LYVO AGENT INTERFACES ==========
+export interface CreateAgentRequest {
+  agent_name: string;
+  character_prompt: string;
+  voice_id: string;
+  language?: string; // default: "en"
+  llm_choice?: string; 
+}
+
+export interface UpdateAgentRequest {
+  agent_name?: string;
+  character_prompt?: string;
+  voice_id?: string;
+  language?: string;
+  llm_choice?: string;
+}
+
+export interface Agent {
+  id: string;
+  agent_name: string;
+  character_prompt: string;
+  voice_id: string;
+  voice_name: string;
+  language: string;
+  llm_choice: string;
+  total_messages: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatRequest {
+    message: string;
+    audio_enabled?: boolean; // default: false
+}
+
+export interface ChatResponse {
+  message_id: string;
+  agent_response: string;
+  audio_url: string | null;
+  credits_used: number;
+  user_balance: number;
+}
+
+export interface AgentMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  audio_url: string | null;
+  audio_enabled: boolean;
+  credits_used: number;
+  created_at: string;
+}
+
+export interface ConversationHistory {
+  agent_id: string;
+  agent_name: string;
+  total_messages: number;
+  messages: AgentMessage[];
+}
+
+export interface ConversationStats {
+  total_messages: number;
+  user_messages: number;
+  assistant_messages: number;
+  total_credits_used: number;
+  audio_messages: number;
+}
+
+export interface ConversationExport {
+  agent_name: string;
+  character_prompt: string;
+  total_messages: number;
+  exported_at: string;
+  conversation: Array<{
+    role: string;
+    content: string;
+    audio_enabled: boolean;
+    credits_used: number;
+    timestamp: string;
+  }>;
+}
+
+
+// ========== AGENT LIMITS INTERFACE ==========
+export interface AgentLimits {
+  agents_created: number;
+  max_agents_allowed: number;
+  can_create_more: boolean;
+  is_admin: boolean;
+}
+
+// ========== VOICE CHAT (STT) INTERFACES ==========
+export interface VoiceChatRequest {
+   audio_file: File;
+   audio_enabled: boolean;
+}
+
+export interface VoiceChatResponse {
+  message_id: string;
+  agent_response: string;
+  audio_url: string | null;
+  credits_used: number;
+  user_balance: number;
+  transcribed_text?: string; // The text that was recognized from voice
+}
+
 
 // ========== TOKEN MANAGEMENT (IMPROVED) ==========
 const TOKEN_KEY = 'access_token';
@@ -268,6 +473,79 @@ export async function getRandomVoices(count: number = 7): Promise<Voices[]> {
   return shuffled.slice(0, count);
 }
 
+
+
+// ========== TTS GENERATION FUNCTIONS ==========
+export interface GenerateRequest {
+  text: string;
+  voice_id: string;
+}
+
+export interface GenerateResponse {
+  id: string;
+  audio_url: string;
+  duration: number;
+  voice_name: string;
+}
+
+export async function generateSpeech(
+  text: string,
+  voiceId: string
+): Promise<GenerateResponse> {
+  return apiCall<GenerateResponse>('/tts/generate', {
+    method: 'POST',
+    body: JSON.stringify({
+      text: text,
+      voice_id: voiceId
+    }),
+  }, true);
+}
+
+export async function checkGenerationStatus(
+  generationId: string
+): Promise<GenerationStatus> {
+  return apiCall<GenerationStatus>(`/tts/generation/${generationId}/status`, {}, true);
+}
+
+// Helper function to poll until generation is complete
+export async function waitForGeneration(
+  generationId: string,
+  onProgress?: (status: string) => void,
+  pollInterval: number = 3000,
+  maxAttempts: number = 200 
+): Promise<GenerationStatus> {
+  let attempts = 0;
+  
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const status = await checkGenerationStatus(generationId);
+        
+        if (onProgress) {
+          onProgress(status.status);
+        }
+        
+        if (status.status === 'completed') {
+          clearInterval(interval);
+          resolve(status);
+        } else if (status.status === 'failed') {
+          clearInterval(interval);
+          reject(new APIError('Generation failed', 500));
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          reject(new APIError('Generation timeout - please try again', 408));
+        }
+      } catch (error) {
+        clearInterval(interval);
+        reject(error);
+      }
+    }, pollInterval);
+  });
+}
+
+
 // ========== AUDIOBOOK API FUNCTIONS ==========
 export async function generateAudiobookFromFile(
   file: File,
@@ -312,6 +590,11 @@ export async function generateAudiobookFromFile(
 
 export async function getUserAudiobooks(): Promise<AudiobookJob[]> {
   return apiCall<AudiobookJob[]>('/tts/audiobook/history', {}, true);
+}
+
+// ========== GET USER TTS HISTORY ==========
+export async function getUserTTSHistory(): Promise<TTSHistory[]> {
+  return apiCall<TTSHistory[]>('/tts/history', {}, true);
 }
 
 // ========== VOICE CLONING API FUNCTIONS ==========
@@ -365,6 +648,14 @@ export async function deleteClone(voiceId: string): Promise<void> {
   }, true);
 }
 
+
+export interface GenerationStatus {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  audio_url: string | null;
+  duration: number | null;
+  voice_name: string;
+}
 
 // ========== ADMIN INTERFACE ========
 export interface AdminStats {
@@ -526,4 +817,371 @@ export async function updateVoiceDetails(
     const error = await response.json().catch(() => ({}));
     throw new APIError(error.detail || 'Update failed', response.status);
   }
+}
+
+
+
+
+// ========== LYVO AGENT API FUNCTIONS ==========
+
+/**
+ * 🤖 Create a new Lyvo Agent
+ */
+export async function createAgent(data: CreateAgentRequest): Promise<Agent> {
+  return apiCall<Agent>('/agent/create', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true);
+}
+
+/**
+ * 🤖 Get all agents for current user
+ */
+export async function getMyAgents(): Promise<Agent[]> {
+  return apiCall<Agent[]>('/agent/my-agents', {}, true);
+}
+
+
+/**
+ * 📊 Get user's agent creation limits
+ */
+export async function getAgentLimits(): Promise<AgentLimits> {
+  return apiCall<AgentLimits>('/agent/limits', {}, true);
+}
+
+/**
+ * 🤖 Get single agent details
+ */
+export async function getAgent(agentId: string): Promise<Agent> {
+  return apiCall<Agent>(`/agent/${agentId}`, {}, true);
+}
+
+/**
+ * 🤖 Update agent details
+ */
+export async function updateAgent(
+  agentId: string,
+  data: UpdateAgentRequest
+): Promise<Agent> {
+  return apiCall<Agent>(`/agent/${agentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }, true);
+}
+
+/**
+ * 🤖 Delete an agent
+ */
+export async function deleteAgent(agentId: string): Promise<void> {
+  await apiCall<void>(`/agent/${agentId}`, {
+    method: 'DELETE',
+  }, true);
+}
+
+/**
+ * 💬 Send a message to an agent (chat)
+ */
+export async function chatWithAgent(
+  agentId: string,
+  data: ChatRequest
+): Promise<ChatResponse> {
+  return apiCall<ChatResponse>(`/agent/${agentId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true);
+}
+
+
+/**
+ * 🎙️ Send VOICE message to agent (Speech-to-Text + Chat + Text-to-Speech)
+ */
+export async function chatWithAgentVoice(
+  agentId: string,
+  audioFile: File,
+  audioEnabled: boolean = true
+): Promise<VoiceChatResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+  const formData = new FormData();
+  formData.append('audio_file', audioFile);
+  formData.append('audio_enabled', audioEnabled.toString());
+  
+  // ✅ Use direct fetch for FormData (Content-Type must be auto-set)
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/${agentId}/chat-audio`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+  
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+  
+  if (response.status === 429) {
+    throw new APIError('Rate limit exceeded - please slow down', 429);
+  }
+  
+  if (response.status === 400) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(
+      error.detail || 'Invalid audio file or speech recognition failed',
+      400
+    );
+  }
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(
+      error.detail || 'Voice chat failed',
+      response.status
+    );
+  }
+  
+  return response.json();
+}
+
+
+/**
+ * 📜 Get conversation history for an agent
+ */
+export async function getConversationHistory(
+  agentId: string,
+  limit?: number
+): Promise<ConversationHistory> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiCall<ConversationHistory>(`/agent/${agentId}/history${query}`, {}, true);
+}
+
+/**
+ * 🗑️ Clear conversation history for an agent
+ */
+export async function clearConversationHistory(agentId: string): Promise<{
+  success: boolean;
+  message: string;
+  agent_id: string;
+  deleted_messages: number;
+}> {
+  return apiCall(`/agent/${agentId}/history`, {
+    method: 'DELETE',
+  }, true);
+}
+
+/**
+ * 📊 Get conversation statistics
+ */
+export async function getConversationStats(
+  agentId: string
+): Promise<ConversationStats> {
+  return apiCall<ConversationStats>(`/agent/${agentId}/stats`, {}, true);
+}
+
+/**
+ * 📥 Export conversation (JSON or TXT)
+ */
+export async function exportConversation(
+  agentId: string,
+  format: 'json' | 'txt' = 'json'
+): Promise<ConversationExport | { text: string }> {
+  return apiCall(`/agent/${agentId}/export?format=${format}`, {}, true);
+}
+
+/**
+ * 🎵 Get agent audio file URL (for playback)
+ */
+export function getAgentAudioUrl(filename: string): string {
+  return `${API_BASE_URL}/agent/audio/${filename}`;
+}
+
+
+// ========== DELETE GENERATION FUNCTIONS ==========
+
+/**
+ * 🔒 Delete a TTS generation (user must own it)
+ */
+export  async function deleteGeneration(generationId:string): Promise<void> {
+  await apiCall<void>(`/tts/generation/${generationId}`, {
+    method: 'DELETE'
+  }, true) // requires authentication
+  
+}
+
+/**
+ * 🔒 Delete an audiobook (user must own it)
+ */
+export async function deleteAudiobook(generationId: string): Promise<void> {
+  await apiCall<void>(`/tts/audiobook/${generationId}`, {
+    method: 'DELETE',
+  }, true); // ✅ requireAuth = true
+}
+
+
+// ========== SHARE API FUNCTIONS ==========
+
+/**
+ * 🔗 Create shareable link for agent
+ */
+export async function createShareLink(
+  agentId: string,
+  data: CreateShareLinkRequest
+): Promise<ShareLinkResponse> {
+  return apiCall<ShareLinkResponse>(`/agent/${agentId}/share/create`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, true);
+}
+
+/**
+ * ✅ Validate share token and get access
+ */
+export async function validateShareToken(
+  shareToken: string,
+  data: ValidateShareRequest
+): Promise<ShareAccessResponse> {
+  return apiCall<ShareAccessResponse>(`/agent/share/${shareToken}/validate`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, false); // ✅ No auth required (guest can validate)
+}
+
+/**
+ * 💬 Send text message via share link
+ */
+export async function shareChatText(
+  shareToken: string,
+  data: ShareChatRequest,
+  sessionToken?: string
+): Promise<ShareChatResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  // ✅ Add session token for guest users
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken;
+  }
+  
+  const token = getToken(); // Logged-in user token (if any)
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/share/${shareToken}/chat`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Chat failed', response.status);
+  }
+  
+  return response.json();
+}
+
+/**
+ * 🎙️ Send voice message via share link
+ */
+export async function shareChatVoice(
+  shareToken: string,
+  audioFile: File,
+  audioEnabled: boolean = true,
+  sessionToken?: string
+): Promise<ShareChatResponse> {
+  const formData = new FormData();
+  formData.append('audio_file', audioFile);
+  formData.append('audio_enabled', audioEnabled.toString());
+  
+  const headers: Record<string, string> = {};
+  
+  // ✅ Add session token for guests
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken;
+  }
+  
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/share/${shareToken}/chat-voice`,
+    {
+      method: 'POST',
+      headers,
+      body: formData,
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Voice chat failed', response.status);
+  }
+  
+  return response.json();
+}
+
+/**
+ * 📊 Get share usage stats (owner only)
+ */
+export async function getAgentShares(agentId: string): Promise<ShareListResponse> {
+  return apiCall<ShareListResponse>(`/agent/${agentId}/shares`, {}, true);
+}
+
+/**
+ * 🚫 Ban user from share (owner only)
+ */
+export async function banUserFromShare(
+  shareId: string,
+  identifier: string,
+  reason?: string
+): Promise<{ success: boolean; message: string; banned_identifier: string }> {
+  return apiCall(`/agent/share/${shareId}/ban`, {
+    method: 'POST',
+    body: JSON.stringify({ identifier, reason }),
+  }, true);
+}
+
+/**
+ * ❌ Revoke share link (owner only)
+ */
+export async function revokeShareLink(
+  shareId: string
+): Promise<{ success: boolean; message: string; affected_users: number }> {
+  return apiCall(`/agent/share/${shareId}/revoke`, {
+    method: 'DELETE',
+  }, true);
+}
+
+/**
+ * ♻️ Reactivate share link (owner only)
+ */
+export async function reactivateShareLink(
+  shareId: string,
+  extendDays: number = 3
+): Promise<{ success: boolean; message: string; new_expiry: string }> {
+  return apiCall(`/agent/share/${shareId}/reactivate`, {
+    method: 'POST',
+    body: JSON.stringify({ extend_days: extendDays }),
+  }, true);
+}
+
+
+/**
+ * 💰 Get user's current credit balance
+ */
+export async function getUserBalance(): Promise<UserBalance> {
+  return apiCall<UserBalance>('/agent/user/balance', {}, true);
 }

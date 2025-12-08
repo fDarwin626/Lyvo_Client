@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 
 interface RippleGridProps {
@@ -56,9 +56,19 @@ const RippleGrid = ({
   const targetMouseRef = useRef({ x: 0.5, y: 0.5 });
   const mouseInfluenceRef = useRef(0);
   const uniformsRef = useRef<Uniforms | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current || !mounted) return;
+
+    let animationFrameId: number;
+    let isCleanedUp = false;
 
     const hexToRgb = (hex: string): [number, number, number] => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -67,18 +77,29 @@ const RippleGrid = ({
         : [1, 1, 1];
     };
 
-    const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
-      alpha: true
-    });
-    const gl = renderer.gl;
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.canvas.style.width = '100%';
-    gl.canvas.style.height = '100%';
-    containerRef.current.appendChild(gl.canvas);
+    try {
+      const renderer = new Renderer({
+        dpr: Math.min(window.devicePixelRatio, 2),
+        alpha: true
+      });
+      const gl = renderer.gl;
+      
+      if (!gl) {
+        console.error('WebGL context not available');
+        return;
+      }
 
-    const vert = `
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.canvas.style.width = '100%';
+      gl.canvas.style.height = '100%';
+      gl.canvas.style.display = 'block';
+      
+      if (containerRef.current) {
+        containerRef.current.appendChild(gl.canvas);
+      }
+
+      const vert = `
 attribute vec2 position;
 varying vec2 vUv;
 void main() {
@@ -86,7 +107,7 @@ void main() {
     gl_Position = vec4(position, 0.0, 1.0);
 }`;
 
-    const frag = `precision highp float;
+      const frag = `precision highp float;
 uniform float iTime;
 uniform vec2 iResolution;
 uniform bool enableRainbow;
@@ -179,96 +200,129 @@ void main() {
     gl_FragColor = vec4(color * t * finalFade * opacity, alpha);
 }`;
 
-    const uniforms: Uniforms = {
-      iTime: { value: 0 },
-      iResolution: { value: [1, 1] },
-      enableRainbow: { value: enableRainbow },
-      gridColor: { value: hexToRgb(gridColor) },
-      rippleIntensity: { value: rippleIntensity },
-      gridSize: { value: gridSize },
-      gridThickness: { value: gridThickness },
-      fadeDistance: { value: fadeDistance },
-      vignetteStrength: { value: vignetteStrength },
-      glowIntensity: { value: glowIntensity },
-      opacity: { value: opacity },
-      gridRotation: { value: gridRotation },
-      mouseInteraction: { value: mouseInteraction },
-      mousePosition: { value: [0.5, 0.5] },
-      mouseInfluence: { value: 0 },
-      mouseInteractionRadius: { value: mouseInteractionRadius }
-    };
+      const uniforms: Uniforms = {
+        iTime: { value: 0 },
+        iResolution: { value: [1, 1] },
+        enableRainbow: { value: enableRainbow },
+        gridColor: { value: hexToRgb(gridColor) },
+        rippleIntensity: { value: rippleIntensity },
+        gridSize: { value: gridSize },
+        gridThickness: { value: gridThickness },
+        fadeDistance: { value: fadeDistance },
+        vignetteStrength: { value: vignetteStrength },
+        glowIntensity: { value: glowIntensity },
+        opacity: { value: opacity },
+        gridRotation: { value: gridRotation },
+        mouseInteraction: { value: mouseInteraction },
+        mousePosition: { value: [0.5, 0.5] },
+        mouseInfluence: { value: 0 },
+        mouseInteractionRadius: { value: mouseInteractionRadius }
+      };
 
-    uniformsRef.current = uniforms;
+      uniformsRef.current = uniforms;
 
-    const geometry = new Triangle(gl);
-    const program = new Program(gl, { vertex: vert, fragment: frag, uniforms });
-    const mesh = new Mesh(gl, { geometry, program });
+      const geometry = new Triangle(gl);
+      const program = new Program(gl, { vertex: vert, fragment: frag, uniforms });
+      const mesh = new Mesh(gl, { geometry, program });
 
-    const resize = () => {
-      if (!containerRef.current) return;
-      const { clientWidth: w, clientHeight: h } = containerRef.current;
-      renderer.setSize(w, h);
-      uniforms.iResolution.value = [w, h];
-    };
+      const resize = () => {
+        if (!containerRef.current || isCleanedUp) return;
+        const { clientWidth: w, clientHeight: h } = containerRef.current;
+        renderer.setSize(w, h);
+        uniforms.iResolution.value = [w, h];
+      };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!mouseInteraction || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = 1.0 - (e.clientY - rect.top) / rect.height;
-      targetMouseRef.current = { x, y };
-    };
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!mouseInteraction || !containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = 1.0 - (e.clientY - rect.top) / rect.height;
+        targetMouseRef.current = { x, y };
+      };
 
-    const handleMouseEnter = () => {
-      if (!mouseInteraction) return;
-      mouseInfluenceRef.current = 1.0;
-    };
+      const handleMouseEnter = () => {
+        if (!mouseInteraction) return;
+        mouseInfluenceRef.current = 1.0;
+      };
 
-    const handleMouseLeave = () => {
-      if (!mouseInteraction) return;
-      mouseInfluenceRef.current = 0.0;
-    };
+      const handleMouseLeave = () => {
+        if (!mouseInteraction) return;
+        mouseInfluenceRef.current = 0.0;
+      };
 
-    window.addEventListener('resize', resize);
-    if (mouseInteraction) {
-      containerRef.current.addEventListener('mousemove', handleMouseMove);
-      containerRef.current.addEventListener('mouseenter', handleMouseEnter);
-      containerRef.current.addEventListener('mouseleave', handleMouseLeave);
+      window.addEventListener('resize', resize);
+      if (mouseInteraction && containerRef.current) {
+        containerRef.current.addEventListener('mousemove', handleMouseMove);
+        containerRef.current.addEventListener('mouseenter', handleMouseEnter);
+        containerRef.current.addEventListener('mouseleave', handleMouseLeave);
+      }
+      
+      resize();
+
+      const render = (t: number) => {
+        if (isCleanedUp) return;
+
+        uniforms.iTime.value = t * 0.001;
+
+        const lerpFactor = 0.1;
+        mousePositionRef.current.x += (targetMouseRef.current.x - mousePositionRef.current.x) * lerpFactor;
+        mousePositionRef.current.y += (targetMouseRef.current.y - mousePositionRef.current.y) * lerpFactor;
+
+        const currentInfluence = uniforms.mouseInfluence.value;
+        const targetInfluence = mouseInfluenceRef.current;
+        uniforms.mouseInfluence.value += (targetInfluence - currentInfluence) * 0.05;
+
+        uniforms.mousePosition.value = [mousePositionRef.current.x, mousePositionRef.current.y];
+
+        renderer.render({ scene: mesh });
+        animationFrameId = requestAnimationFrame(render);
+      };
+
+      animationFrameId = requestAnimationFrame(render);
+
+      cleanupRef.current = () => {
+        isCleanedUp = true;
+        
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+
+        window.removeEventListener('resize', resize);
+        
+        if (containerRef.current) {
+          containerRef.current.removeEventListener('mousemove', handleMouseMove);
+          containerRef.current.removeEventListener('mouseenter', handleMouseEnter);
+          containerRef.current.removeEventListener('mouseleave', handleMouseLeave);
+        }
+
+        try {
+          const loseContext = gl.getExtension('WEBGL_lose_context');
+          if (loseContext) {
+            loseContext.loseContext();
+          }
+        } catch (e) {
+          console.warn('Error losing WebGL context:', e);
+        }
+
+        if (containerRef.current && gl.canvas && gl.canvas.parentNode === containerRef.current) {
+          try {
+            containerRef.current.removeChild(gl.canvas);
+          } catch (e) {
+            console.warn('Error removing canvas:', e);
+          }
+        }
+      };
+
+    } catch (error) {
+      console.error('Error initializing RippleGrid:', error);
     }
-    resize();
-
-    const render = (t: number) => {
-      uniforms.iTime.value = t * 0.001;
-
-      const lerpFactor = 0.1;
-      mousePositionRef.current.x += (targetMouseRef.current.x - mousePositionRef.current.x) * lerpFactor;
-      mousePositionRef.current.y += (targetMouseRef.current.y - mousePositionRef.current.y) * lerpFactor;
-
-      const currentInfluence = uniforms.mouseInfluence.value;
-      const targetInfluence = mouseInfluenceRef.current;
-      uniforms.mouseInfluence.value += (targetInfluence - currentInfluence) * 0.05;
-
-      uniforms.mousePosition.value = [mousePositionRef.current.x, mousePositionRef.current.y];
-
-      renderer.render({ scene: mesh });
-      requestAnimationFrame(render);
-    };
-
-    requestAnimationFrame(render);
 
     return () => {
-      window.removeEventListener('resize', resize);
-      if (mouseInteraction && containerRef.current) {
-        containerRef.current.removeEventListener('mousemove', handleMouseMove);
-        containerRef.current.removeEventListener('mouseenter', handleMouseEnter);
-        containerRef.current.removeEventListener('mouseleave', handleMouseLeave);
-      }
-      renderer.gl.getExtension('WEBGL_lose_context')?.loseContext();
-      if (containerRef.current && gl.canvas.parentNode === containerRef.current) {
-        containerRef.current.removeChild(gl.canvas);
+      if (cleanupRef.current) {
+        cleanupRef.current();
       }
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     if (!uniformsRef.current) return;
@@ -307,7 +361,7 @@ void main() {
     mouseInteractionRadius
   ]);
 
-  return <div ref={containerRef} className="w-full h-full relative overflow-hidden [&_canvas]:block" />;
+  return <div ref={containerRef} className="w-full h-full relative overflow-hidden" style={{ display: 'block' }} />;
 };
 
 export default RippleGrid;

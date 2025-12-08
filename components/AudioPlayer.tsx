@@ -56,7 +56,7 @@ export default function AudioPlayer({ audioUrl, voiceName, onClose }: AudioPlaye
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background 
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-transparent 
     px-6 py-3 flex items-center gap-4 z-50 animate-fade-in">
       <audio ref={audioRef} src={`http://127.0.0.1:8000${audioUrl}`} />
       

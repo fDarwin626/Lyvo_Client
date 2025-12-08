@@ -146,8 +146,8 @@ export default function VoicesPage() {
                           {voice.display_name || voice.name}
                         </h3>
                         {voice.is_premium && (
-                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                            Premium
+                          <span className="text-xs bg-yellow-100 px-2 py-0.2 rounded">
+                            <Icon icon="fluent:premium-20-regular" width="20" height="20" className="text-[#D4AF37]" />
                           </span>
                         )}
                       </div>

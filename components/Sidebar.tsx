@@ -213,15 +213,15 @@ useEffect(() => {
           </Link>
 
           <Link 
-            href="/dashboard/voice-swap"
+            href="/dashboard/create_agent"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/voice-swap') 
                 ? 'bg-brand text-white' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="token-branded:swap" width="33" height="35" /></span>
-            {!isCollapsed && <span ref={addNavRef(3)}>Voice Swap</span>}
+            <span><Icon icon="arcticons:landroid" width="28" height="28" /></span>
+            {!isCollapsed && <span ref={addNavRef(3)}>Agents</span>}
           </Link>
 
           <Link 
@@ -284,6 +284,7 @@ useEffect(() => {
           </Link>
 
 
+
           <Link 
             href="/dashboard/notifications"
             className={`flex items-center mt-5 ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
@@ -295,6 +296,19 @@ useEffect(() => {
             <span><Icon icon="solar:bell-broken" width="24" height="24" className="color: #828282" /></span>
             {!isCollapsed && <span ref={addNavRef(8)}>Notification</span>}
           </Link>
+
+          <Link 
+            href="/dashboard/history"
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
+              isActive('/dashboard/creators') 
+                ? 'bg-gray-100 text-secondary' 
+                : 'text-secondary hover:bg-gray-100'
+            }`}
+          >
+            <span><Icon icon="solar:history-2-broken" width="24" height="24"  className=" #e8be3e" /></span>
+            {!isCollapsed && <span ref={addNavRef(7)}>History</span>}
+          </Link>
+
 
           {/* Upgrade Button */}
           <div className="mt-7 px-1 ">

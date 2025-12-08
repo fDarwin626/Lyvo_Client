@@ -294,7 +294,8 @@ const handleGenerateAudiobook = async () => {
 
                     {/* Dropdown List */}
                     {showVoiceDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-lg max-h-64 overflow-y-auto z-10">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 
+                    rounded-xl shadow-lg max-h-64 overflow-y-auto z-10">
                         {voices.map((voice) => (
                         <div
                             key={voice.id}
@@ -302,9 +303,11 @@ const handleGenerateAudiobook = async () => {
                             setSelectedAudiobookVoice(voice);
                             setShowVoiceDropdown(false);
                             }}
-                            className="p-4 hover:bg-gray-100 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                            className="p-4 hover:bg-gray-100 cursor-pointer flex items-center gap-3 border-b
+                             border-gray-100 last:border-b-0"
                         >
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#43C6AC] to-[#191654] flex items-center justify-center text-white font-amiamie uppercase">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#43C6AC] to-[#191654] 
+                            flex items-center justify-center text-white font-amiamie uppercase">
                             {voice.display_name?.charAt(0) || voice.name.charAt(0)}
                             </div>
                             <div className="flex-1">
@@ -344,7 +347,8 @@ const handleGenerateAudiobook = async () => {
           <button
             onClick={handleGenerateAudiobook}
             disabled={isGenerating}
-            className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654] text-white font-medium py-4 px-6 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654] text-white
+             font-medium py-4 px-6 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGenerating ? 'Generating...' : 'Generate Audiobook'}
           </button>

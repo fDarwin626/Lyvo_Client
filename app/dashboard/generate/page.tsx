@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { getVoices, Voices, getToken } from '@/lib/api';
+import { getVoices, Voices, getToken, generateSpeech, waitForGeneration } from '@/lib/api';
 import Link from 'next/link';
 
 function GenerateContent() {
@@ -39,49 +39,48 @@ function GenerateContent() {
     loadVoices();
   }, [searchParams]);
 
-  const handleGenerate = async () => {
-    if (!text.trim()) {
-      setError('Please enter some text');
-      return;
-    }
+const handleGenerate = async () => {
+  if (!text.trim()) {
+    setError('Please enter some text');
+    return;
+  }
 
-    if (!selectedVoice) {
-      setError('Please select a voice');
-      return;
-    }
+  if (!selectedVoice) {
+    setError('Please select a voice');
+    return;
+  }
 
-    setError('');
-    setLoading(true);
+  setError('');
+  setLoading(true);
+  setGeneratedAudio(null); // Clear previous audio
 
-    try {
-      const token = getToken();
-      const response = await fetch('http://127.0.0.1:8000/tts/generate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: text,
-          voice_id: selectedVoice.id
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Generation failed');
+  try {
+   
+    //  Start generation (returns immediately)
+    const result = await generateSpeech(text, selectedVoice.id);
+    
+    // Wait for completion with status updates
+    const finalStatus = await waitForGeneration(
+      result.id,
+      (status) => {
+        // Optional: You can show status to user
+        console.log('Generation status:', status);
       }
-
-      const data = await response.json();
-      setGeneratedAudio(`http://127.0.0.1:8000${data.audio_url}`);
-      
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate speech');
-    } finally {
-      setLoading(false);
+    );
+    
+    // Step 3: Set the audio URL
+    if (finalStatus.audio_url) {
+      setGeneratedAudio(`http://127.0.0.1:8000${finalStatus.audio_url}`);
+    } else {
+      throw new Error('Audio generation failed');
     }
-  };
-
+    
+  } catch (err: any) {
+    setError(err.message || 'Failed to generate speech');
+  } finally {
+    setLoading(false);
+  }
+};
   const characterCount = text.length;
   const maxCharacters = 5000;
 
