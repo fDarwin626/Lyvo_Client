@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Mic, MicOff, Send, Volume2, VolumeX, Loader2, 
-  Lock, AlertCircle, LogIn 
+  Lock, AlertCircle, LogIn, 
+  Users
 } from 'lucide-react';
 import { 
   validateShareToken, 
@@ -15,8 +16,16 @@ import {
   getToken,
   isAuthenticated,
   getUserBalance,
-  getAgent
+  getAgent,
+  getSessionStats,
+  getSharedChatHistory,
+  getConversationHistory,
+  authenticateChatRoom,  
+  ChatRoomAuthRequest,   
+  ChatRoomAuthResponse,
+
 } from '@/lib/api';
+import { Icon } from '@iconify/react';
 
 interface Message {
   id: string;
@@ -29,6 +38,9 @@ export default function ChatRoomPage() {
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Authentication State
   const [accessType, setAccessType] = useState<'owner' | 'guest' | 'account' | null>(null);
@@ -57,7 +69,7 @@ export default function ChatRoomPage() {
   
   // Credits Display
   const [ownerBalance, setOwnerBalance] = useState<number>(0);
-  const [initialBalance, setInitialBalance] = useState<number>(10000); // Will be fetched
+  const [initialBalance, setInitialBalance] = useState<number>(10000);
   const [creditsUsedThisSession, setCreditsUsedThisSession] = useState<number>(0);
   
   // Rate Limiting Display
@@ -70,7 +82,67 @@ export default function ChatRoomPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // ========== INITIALIZATION ==========
+  // ==========  PERSISTENCE HELPERS ==========
+  
+const saveSessionToLocalStorage = (identifier: string, type: 'owner' | 'guest' | 'account') => {
+    if (typeof window !== 'undefined') {
+        // ✅ SECURITY: Key by the actual identifier (agent_id for owner, share_token for guests)
+        const storageKey = type === 'owner' 
+            ? `chatroom_owner_${identifier}`  // For owner: use agent_id
+            : `chatroom_session_${params.token}`;  // For guests: use share token
+        
+        localStorage.setItem(storageKey, JSON.stringify({
+            sessionToken: identifier,
+            accessType: type,
+            timestamp: Date.now()
+        }));
+        
+        console.log(`💾 Saved session: type=${type}, key=${storageKey.substring(0, 30)}...`);
+    }
+};
+
+const loadSessionFromLocalStorage = (): { sessionToken: string; accessType: 'owner' | 'guest' | 'account' } | null => {
+    if (typeof window !== 'undefined') {
+        // ✅ Try owner key first (if they own this agent)
+        const ownerKey = `chatroom_owner_${params.token}`;
+        let saved = localStorage.getItem(ownerKey);
+        
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                console.log(`🔄 Loaded owner session: ${ownerKey.substring(0, 30)}...`);
+                return parsed;
+            } catch {
+                localStorage.removeItem(ownerKey);
+            }
+        }
+        
+        // ✅ Try share token key
+        const shareKey = `chatroom_session_${params.token}`;
+        saved = localStorage.getItem(shareKey);
+        
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                console.log(`🔄 Loaded share session: ${shareKey.substring(0, 30)}...`);
+                return parsed;
+            } catch {
+                localStorage.removeItem(shareKey);
+            }
+        }
+    }
+    return null;
+};
+
+const clearSessionFromLocalStorage = () => {
+    if (typeof window !== 'undefined') {
+        // Clear both possible keys
+        localStorage.removeItem(`chatroom_owner_${params.token}`);
+        localStorage.removeItem(`chatroom_session_${params.token}`);
+      //  console.log(`🗑️ Cleared sessions for token ${params.token.substring(0, 20)}...`);
+    }
+};
+  // ========== 🔒 SECURE UNIFIED AUTHENTICATION ==========
   
   useEffect(() => {
     initializeChatRoom();
@@ -80,74 +152,248 @@ export default function ChatRoomPage() {
     scrollToBottom();
   }, [messages]);
 
+  /**
+   * 🔒 MAIN INITIALIZATION
+   * Checks for saved session first, then authenticates fresh
+   */
   const initializeChatRoom = async () => {
     setIsValidating(true);
     
     try {
-      // Check if user is already logged in (owner or account-required share)
-      const userToken = getToken();
+      // Check for saved session in localStorage
+      const savedSession = loadSessionFromLocalStorage();
       
-      if (userToken) {
-        // Try as owner first (token is agent_id for owner)
-        await validateAsOwner(token, userToken);
-      } else {
-        // Try as share token
-        await validateAsShareToken(token);
+      if (savedSession) {
+        console.log('🔄 Found saved session, restoring...');
+        
+        try {
+          await authenticateWithSavedSession(savedSession);
+          return; // Successfully restored
+        } catch (error) {
+          console.log('⚠️ Saved session invalid, clearing...');
+          clearSessionFromLocalStorage();
+          // Continue to fresh authentication
+        }
       }
+
+      // No saved session or restoration failed - authenticate fresh
+      await performAuthentication();
+      
     } catch (error: any) {
       console.error('❌ Initialization error:', error);
-      setValidationError(error.message || 'Invalid link');
+      clearSessionFromLocalStorage();
+      setValidationError(error.message || 'Access denied');
       setNeedsValidation(true);
     } finally {
       setIsValidating(false);
     }
   };
 
-const validateAsOwner = async (agentId: string, userToken: string) => {
-  // Owner access - using their JWT token
-  
-  try {
-    // ✅ Fetch user balance
-    const balanceData = await getUserBalance();
+  /**
+   * 🔒 PERFORM AUTHENTICATION
+   * Calls backend's secure authentication endpoint
+   * Backend handles ALL logic - frontend just displays results
+   */
+  const performAuthentication = async (credentials?: ChatRoomAuthRequest) => {
+    try {
+      // Call the API function we created in api.ts
+      const data = await authenticateChatRoom(token, credentials);
+      
+      // ========== HANDLE RESPONSE ==========
+      
+      if (data.status === 'needs_credentials') {
+        // Server says: show validation form
+        setNeedsValidation(true);
+        setAgentName(data.agent_name || '');
+        
+        // Determine what type of validation is needed
+        if (data.credential_type === 'password_and_email') {
+          console.log('📋 Password + email required');
+        } else if (data.credential_type === 'login_required') {
+          console.log('🔑 Login required');
+        }
+        
+        return;
+      }
+      
+     if (data.status === 'authenticated') {
+    console.log(`✅ Authenticated as ${data.access_type}`);
     
-    // ✅ Fetch agent info
-    const agentData = await getAgent(agentId);
+    // ✅ SECURITY: Always use backend's agent_id, NEVER the URL token
+    const verifiedAgentId = data.agent_id!;
+    const verifiedAccessType = data.access_type!;
     
-    setAccessType('owner');
-    setAgentId(agentId);
-    setAgentName(agentData.agent_name);
-    setAgentCharacter(agentData.character_prompt);
+    setAccessType(verifiedAccessType);
+    setAgentId(verifiedAgentId);  // This is the REAL agent ID from backend
+    setAgentName(data.agent_name!);
+    setSessionToken(data.session_token || null);
     setNeedsValidation(false);
     
-    // ✅ Set real balance
-    setInitialBalance(balanceData.balance); // Use current as initial
-    setOwnerBalance(balanceData.balance);
+    // ✅ CRITICAL: Log if URL token differs from backend agent_id (for debugging)
+    if (verifiedAccessType === 'owner' && token !== verifiedAgentId) {
+        console.warn('⚠️  URL token differs from backend agent_id');
+        console.warn(`   URL token: ${token.substring(0, 20)}...`);
+        console.warn(`   Backend agent_id: ${verifiedAgentId.substring(0, 20)}...`);
+        console.warn('   This is OK if owner opened a share link, but using backend agent_id for all operations');
+    }
     
-    // Add welcome message
-    setMessages([{
-      id: '1',
-      role: 'agent',
-      content: `Hi! I'm ${agentData.agent_name}. How can I assist you today?`,
-      timestamp: new Date()
-    }]);
+    // Save session with the VERIFIED agent_id (not URL token)
+    if (verifiedAccessType === 'guest' && data.session_token) {
+        saveSessionToLocalStorage(data.session_token, 'guest');
+    } else if (verifiedAccessType === 'account' || verifiedAccessType === 'owner') {
+        const userToken = getToken();
+        if (userToken) {
+            // ✅ For owner: Save the REAL agent_id
+            saveSessionToLocalStorage(verifiedAgentId, verifiedAccessType);
+        }
+    }
     
-    console.log('✅ Owner access validated');
-    console.log(`💰 Balance: ${balanceData.balance} credits`);
-  } catch (error) {
-    throw error;
-  }
-};
+    // Load appropriate data
+    if (verifiedAccessType === 'owner') {
+        await loadOwnerData(verifiedAgentId);  // Use verified ID
+    } else {
+        await loadSharedUserData(data.session_token || null);
+    }
+}
+      
+    } catch (error: any) {
+      console.error('❌ Authentication error:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Restore session from saved credentials
+   */
+  const authenticateWithSavedSession = async (savedSession: {
+    sessionToken: string;
+    accessType: 'owner' | 'guest' | 'account';
+  }) => {
+    if (savedSession.accessType === 'guest') {
+      // For guests, verify session is still valid by loading stats
+      try {
+        const stats = await getSessionStats(token, savedSession.sessionToken);
+        
+        // If we got here, session is valid
+        setAccessType('guest');
+        setSessionToken(savedSession.sessionToken);
+        setNeedsValidation(false);
+        
+        await loadSharedUserData(savedSession.sessionToken);
+        console.log('✅ Guest session restored');
+      } catch (error) {
+        throw new Error('Guest session expired');
+      }
+      
+    } else {
+      // For owner/account, re-authenticate with current JWT
+      const userToken = getToken();
+      if (!userToken) {
+        throw new Error('No JWT token found');
+      }
+      
+      // Call authenticate endpoint with current JWT
+      await performAuthentication();
+    }
+  };
+
+  //  LOAD SHARED USER DATA (history + stats)
+  const loadSharedUserData = async (sessionToken: string | null) => {
+    try {
+      // Load chat history
+      const history = await getSharedChatHistory(token, sessionToken || undefined);
+      
+      const formattedMessages: Message[] = history.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'agent',
+        content: msg.content,
+        timestamp: new Date(msg.created_at)
+      }));
+      
+      setMessages(formattedMessages);
+      setAgentName(history.agent_name);
+      
+      // Load stats
+      const stats = await getSessionStats(token, sessionToken || undefined);
+      setOwnerBalance(stats.owner_balance);
+      setMessagesThisHour(stats.messages_sent);
+      setCreditsUsedThisSession(stats.credits_used);
+      
+      // Calculate real initial balance
+      setInitialBalance(stats.owner_balance + stats.credits_used);
+      
+      console.log('✅ Loaded shared user data:', formattedMessages.length, 'messages');
+      console.log('💰 Credits:', stats.owner_balance, '/', stats.owner_balance + stats.credits_used);
+    } catch (error) {
+      console.error('Failed to load shared user data:', error);
+    }
+  };
+
+  // 🆕 LOAD OWNER DATA (history + balance)
+  const loadOwnerData = async (agentId: string) => {
+    try {
+      // Load conversation history
+      const history = await getConversationHistory(agentId);
+      
+      const formattedMessages: Message[] = history.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'agent',
+        content: msg.content,
+        timestamp: new Date(msg.created_at)
+      }));
+      
+      setMessages(formattedMessages);
+      
+      // Load balance
+      const balanceData = await getUserBalance();
+      setOwnerBalance(balanceData.balance);
+      
+      // Calculate real initial balance
+      const totalCreditsUsed = history.messages
+        .filter(msg => msg.role === 'assistant')
+        .reduce((sum, msg) => sum + msg.credits_used, 0);
+      
+      setInitialBalance(balanceData.balance + totalCreditsUsed);
+      setCreditsUsedThisSession(totalCreditsUsed);
+      
+      console.log('✅ Loaded owner data:', formattedMessages.length, 'messages');
+      console.log('💰 Credits:', balanceData.balance, '/', balanceData.balance + totalCreditsUsed);
+    } catch (error) {
+      console.error('Failed to load owner data:', error);
+    }
+  };
+
+
+  const validateAsOwner = async (agentId: string, userToken: string) => {
+    try {
+      const balanceData = await getUserBalance();
+      const agentData = await getAgent(agentId);
+      
+      setAccessType('owner');
+      setAgentId(agentId);
+      setAgentName(agentData.agent_name);
+      setAgentCharacter(agentData.character_prompt);
+      setNeedsValidation(false);
+      
+      //  SAVE SESSION
+      saveSessionToLocalStorage(userToken, 'owner');
+      
+      //  LOAD OWNER DATA
+      await loadOwnerData(agentId);
+      
+      console.log('✅ Owner access validated');
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const validateAsShareToken = async (shareToken: string) => {
-    // This is a share token - needs validation
     setNeedsValidation(true);
-    
-    // Store token for later use
     console.log('📋 Share token detected, needs validation');
   };
 
   // ========== GUEST VALIDATION ==========
-  
+
   const handleGuestValidation = async () => {
     if (!password || !email) {
       setValidationError('Password and email are required');
@@ -158,29 +404,14 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     setValidationError(null);
 
     try {
-      const response = await validateShareToken(token, {
+      // Call unified authentication
+      await performAuthentication({
         password,
         email,
         name: guestName || undefined
       });
-
-      if (response.success) {
-        setAccessType('guest');
-        setAgentId(response.agent_id);
-        setAgentName(response.agent_name);
-        setSessionToken(response.session_token || null);
-        setNeedsValidation(false);
-        
-        // Add welcome message
-        setMessages([{
-          id: '1',
-          role: 'agent',
-          content: `Hi${guestName ? ' ' + guestName : ''}! I'm ${response.agent_name}. How can I help you today?`,
-          timestamp: new Date()
-        }]);
-        
-        console.log('✅ Guest validation successful');
-      }
+      
+      console.log('✅ Guest validation successful');
     } catch (error: any) {
       console.error('❌ Validation failed:', error);
       setValidationError(error.message || 'Invalid password or link expired');
@@ -189,9 +420,9 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     }
   };
 
+
   const handleAccountLogin = () => {
-    // Redirect to login with return URL
-    router.push(`/signin?redirect=/chat-room/${token}`);
+    router.push(`/auth/signin?redirect=/chat-room/${token}`);
   };
 
   // ========== CHAT FUNCTIONS ==========
@@ -200,42 +431,47 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const sendTextMessage = async () => {
+    const sendTextMessage = async () => {
     if (!inputMessage.trim() || !agentId) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: inputMessage,
-      timestamp: new Date()
+        id: Date.now().toString(),
+        role: 'user',
+        content: inputMessage,
+        timestamp: new Date()
     };
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsProcessing(true);
 
     try {
-      let response;
-      
-      if (accessType === 'owner') {
-        // Owner chat
-        response = await chatWithAgent(agentId, {
-          message: inputMessage,
-          audio_enabled: voiceEnabled
-        });
-        setOwnerBalance(response.user_balance);
-      } else {
-        // Shared user chat
-        response = await shareChatText(
-          token,
-          {
-            message: inputMessage,
-            audio_enabled: voiceEnabled
-          },
-          sessionToken || undefined
-        );
-        setOwnerBalance(response.owner_balance);
-        setMessagesThisHour(prev => prev + 1);
-      }
+        let response;
+        
+        if (accessType === 'owner') {
+            // ✅ SECURITY: Owner always uses verified agentId (never URL token)
+            console.log(`📤 [OWNER] Sending to agent ${agentId.substring(0, 20)}...`);
+            
+            response = await chatWithAgent(agentId, {  // agentId is now guaranteed to be UUID
+                message: inputMessage,
+                audio_enabled: voiceEnabled
+            });
+            setOwnerBalance(response.user_balance);
+            
+        } else {
+            // ✅ SECURITY: Shared users use URL token (share token) + session
+            console.log(`📤 [SHARED] Sending via share token ${token.substring(0, 20)}...`);
+            
+            response = await shareChatText(
+                token,  // Use URL token for shared access
+                {
+                    message: inputMessage,
+                    audio_enabled: voiceEnabled
+                },
+                sessionToken || undefined
+            );
+            setOwnerBalance(response.owner_balance);
+            setMessagesThisHour(prev => prev + 1);
+        }
 
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -253,13 +489,14 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
           playAudioResponse(response.audio_url);
         }
       }
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('❌ Send message error:', error);
       
       if (error.statusCode === 429) {
         alert('Rate limit exceeded! You can send 20 messages per hour. Please wait.');
-      } else if (error.statusCode === 404) {
-        alert('This link is no longer valid. The owner may be out of credits or the link expired.');
+      } else if (error.statusCode === 404 || error.statusCode === 403) {
+        alert('Access denied. Link may be expired or revoked.');
+        clearSessionFromLocalStorage();
         setNeedsValidation(true);
       } else {
         alert(error.message || 'Failed to send message');
@@ -267,7 +504,7 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     } finally {
       setIsProcessing(false);
     }
-  };
+    };
 
   const startRecording = async () => {
     try {
@@ -314,14 +551,20 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
       let response;
 
       if (accessType === 'owner') {
-        response = await chatWithAgentVoice(agentId, audioFile, voiceEnabled);
-        setOwnerBalance(response.user_balance);
-      } else {
+    // ✅ SECURITY: Owner always uses verified agentId
+    console.log(`🎙️ [OWNER] Sending voice to agent ${agentId.substring(0, 20)}...`);
+    
+    response = await chatWithAgentVoice(agentId, audioFile, voiceEnabled);
+    setOwnerBalance(response.user_balance);
+    
+    } else {
+        // ✅ SECURITY: Shared users use share token
+        console.log(`🎙️ [SHARED] Sending voice via share token ${token.substring(0, 20)}...`);
+        
         response = await shareChatVoice(token, audioFile, voiceEnabled, sessionToken || undefined);
         setOwnerBalance(response.owner_balance);
         setMessagesThisHour(prev => prev + 1);
-      }
-
+    }
       const userMessage: Message = {
         id: Date.now().toString(),
         role: 'user',
@@ -346,20 +589,22 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
           playAudioResponse(response.audio_url);
         }
       }
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('❌ Voice message error:', error);
       
       if (error.statusCode === 429) {
         alert('Rate limit exceeded! Please wait.');
-      } else if (error.statusCode === 404) {
-        alert('Link no longer valid.');
+      } else if (error.statusCode === 404 || error.statusCode === 403) {
+        alert('Access denied. Link may be expired or revoked.');
+        clearSessionFromLocalStorage();
+        setNeedsValidation(true);
       } else {
         alert(error.message || 'Failed to process voice message');
       }
     } finally {
       setIsProcessing(false);
     }
-  };
+    };
 
   const pollForAudio = async (statusUrl: string, maxAttempts = 300) => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -420,12 +665,16 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     ? Math.max(0, Math.min(100, (ownerBalance / initialBalance) * 100))
     : 0;
   
-  const circumference = 2 * Math.PI * 40; // radius = 40
+  // Calculate rate limit percentage for shared users (0-20 messages)
+  const rateLimitPercentage = maxMessagesPerHour > 0
+  ? Math.max(0, Math.min(100, ((maxMessagesPerHour - messagesThisHour) / maxMessagesPerHour) * 100))
+  : 0;
+
+  const circumference = 2 * Math.PI * 40;
   const strokeDashoffset = circumference - (creditPercentage / 100) * circumference;
 
   // ========== RENDER ==========
 
-  // Loading State
   if (isValidating && needsValidation) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-cyan-900 flex items-center justify-center p-4">
@@ -437,7 +686,6 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     );
   }
 
-  // Guest Validation UI
   if (needsValidation) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-slate-800 flex items-center justify-center p-4">
@@ -528,109 +776,195 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
     );
   }
 
-  // Main Chat Interface
-  return (
+  return (  
     <div className="min-h-screen bg-[#101114] flex">
-      {/* Sidebar - Credit Display */}
-      <div className="w-64  bg-[#0d0d0f] backdrop-blur-sm border-r border-slate-700 p-6 flex flex-col">
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-white mb-2">{agentName}</h2>
-          <p className="text-sm text-slate-400">
-            {accessType === 'owner' ? 'Your Agent' : 'Shared Agent'}
-          </p>
-        </div>
-
-        {/* Credit Circle */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="relative w-32 h-32 mb-4">
-            <svg className="w-32 h-32 transform -rotate-90">
-              <defs>
-                <linearGradient id="creditGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3B82F6" />
-                  <stop offset="50%" stopColor="#8B5CF6" />
-                  <stop offset="100%" stopColor="#EC4899" />
-                </linearGradient>
-              </defs>
-              <circle
-                cx="64"
-                cy="64"
-                r="40"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                className="text-slate-700"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="40"
-                stroke="url(#creditGradient)"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-white">{Math.round(creditPercentage)}%</span>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <p className="text-sm font-medium text-slate-400 mb-1">Credits Remaining</p>
-            <p className="text-xl font-bold text-white">
-              {ownerBalance.toLocaleString()} <span className="text-blue-400">/</span> {initialBalance.toLocaleString()}
+      {/* Sidebar */}
+      <div className={`
+        fixed left-0 top-0 h-screen
+        ${sidebarOpen ? 'w-64' : 'w-0'}
+        transition-all duration-300 ease-in-out
+        bg-[#0d0d0f] backdrop-blur-sm border-r border-slate-700
+        overflow-hidden z-40
+      `}>
+        <div className="p-6 flex flex-col h-full">
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-2">{agentName}</h2>
+            <p className="text-sm text-slate-400">
+              {accessType === 'owner' ? 'Your Agent' : 'Shared Agent'}
             </p>
           </div>
-        </div>
 
-        {/* Rate Limit (for shared users) */}
-        {accessType !== 'owner' && (
-          <div className="mt-8 bg-slate-800/50 rounded-lg p-4">
-            <p className="text-xs font-semibold text-slate-400 mb-2">Rate Limit</p>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-white font-medium">
-                {messagesThisHour} / {maxMessagesPerHour}
-              </span>
-              <span className="text-xs text-slate-500">per hour</span>
-            </div>
-            <div className="mt-2 w-full bg-slate-700 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
-                style={{ width: `${(messagesThisHour / maxMessagesPerHour) * 100}%` }}
-              />
-            </div>
+          <div className="mb-4">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg
+                text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
           </div>
-        )}
+
+          <div className="flex-1 overflow-y-auto mb-4">
+            <h3 className="text-xs font-semibold text-slate-400 mb-2">YOUR CHATS</h3>
+            {messages
+              .filter(msg => !searchQuery || msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
+              .filter((msg, idx, arr) => idx === 0 || new Date(msg.timestamp).getTime() - new Date(arr[idx-1].timestamp).getTime() > 30 * 60 * 1000)
+              .map((msg, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    const msgElement = document.getElementById(`msg-${msg.id}`);
+                    msgElement?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full text-left p-3 rounded-lg hover:bg-slate-800 mb-2"
+                >
+                  <p className="text-sm text-white truncate">{msg.content.substring(0, 50)}...</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {msg.timestamp.toLocaleDateString()} {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </button>
+              ))
+            }
+          </div>
+
+          <div className="mt-auto">
+            <div className="border border-slate-700 flex flex-col items-center py-4 px-5 rounded-2xl bg-slate-900/60">
+              <div className="relative w-32 h-32 mb-4">
+                <svg className="w-32 h-32 transform -rotate-90">
+                  <defs>
+                    <linearGradient id="creditGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#3B82F6" />
+                      <stop offset="50%" stopColor="#8B5CF6" />
+                      <stop offset="100%" stopColor="#EC4899" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    className="text-slate-700"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="40"
+                    stroke="url(#creditGradient)"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={
+                      accessType === 'owner' 
+                        ? strokeDashoffset 
+                        : circumference - (rateLimitPercentage / 100) * circumference
+                    }
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-amiamie text-white">{accessType === 'owner' 
+                ? `${Math.round(creditPercentage)}%`
+                : `${Math.round(rateLimitPercentage)}%`
+              }</span>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-400 mb-1">
+                  {accessType === 'owner' ? 'Credits Remaining' : 'Messages Available'}
+                </p>
+                <p className="text-semibold font-amiamie-round text-white">
+                {accessType === 'owner' 
+                  ? `${ownerBalance.toLocaleString()} / ${initialBalance.toLocaleString()}`
+                  : `${maxMessagesPerHour - messagesThisHour} / ${maxMessagesPerHour}`
+                }
+              </p>
+              </div>
+            </div>
+              {accessType !== 'owner' && (
+              <p className="text-xs text-slate-500 mt-1">Resets every hour</p>
+            )}
+            
+          </div>
+
+          {accessType !== 'owner' && (
+            <div className="mt-4 bg-slate-800/50 rounded-lg p-4">
+              <p className="text-xs font-semibold text-slate-400 mb-2">Rate Limit</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white font-medium">
+                  {messagesThisHour} / {maxMessagesPerHour}
+                </span>
+                <span className="text-xs text-slate-500">per hour</span>
+              </div>
+              <div className="mt-2 w-full bg-slate-700 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                  style={{ width: `${(messagesThisHour / maxMessagesPerHour) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Collapse Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className={`fixed top-6 w-8 h-8 
+          flex items-center justify-center z-50
+          ${sidebarOpen ? 'left-[200px]' : 'left-4'}`}
+      >
+        {sidebarOpen ? 
+        <Icon icon="ic:sharp-menu-open" width="24" height="24" className="text-white hover:text-[#fdc10a] hover:scale-107" /> 
+        : <Icon icon="heroicons:bars-3" width="20" height="20" className="text-white hover:text-[#fdc10a] hover:scale-107" />}
+      </button>
+
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={`
+        flex-1 flex flex-col transition-all duration-300
+        ${sidebarOpen ? 'ml-64' : 'ml-10'}
+      `}>
         {/* Header */}
         <div className="bg-transparent p-4 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-white">{agentName}</h3>
             <p className="text-sm text-slate-400">{agentCharacter || 'AI Assistant'}</p>
           </div>
-          <button
-            onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className={`p-3 rounded-lg transition-colors ${
-              voiceEnabled 
-                ? 'bg-blue-500/20 text-blue-400' 
-                : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className={`p-3 rounded-lg transition-colors ${
+                voiceEnabled 
+                  ? 'bg-blue-500/20 text-blue-400' 
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            </button>
+
+            {accessType === 'owner' && (
+               <button
+                  onClick={() => router.push(`/agent/${agentId}/shared-users`)}
+                  className="p-4"
+                  title="Manage shared users"
+                >
+                  <Icon icon="lets-icons:user-scan-light" width="34" height="34" 
+                  className="text-gray-200 hover:text-[#fdc10a] hover:rotate-12 hover:scale-119" />
+               </button>
+            )}
+          </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-3xl mx-auto space-y-4">
+        <div className={`flex-1 overflow-y-auto p-6 ${sidebarOpen ? 'ml-4' : 'ml-0'}`}>
+          <div className="max-w-9xl mx-auto space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
+                id={`msg-${message.id}`}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
@@ -652,7 +986,7 @@ const validateAsOwner = async (agentId: string, userToken: string) => {
         </div>
 
         {/* Input Area */}
-        <div className=" bg-[#101114] p-4">
+        <div className="bg-[#101114] p-4">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-3">
               <button

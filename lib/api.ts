@@ -244,6 +244,23 @@ export interface ConversationExport {
 }
 
 
+// ========== UNIFIED CHAT ROOM AUTHENTICATION INTERFACES ==========
+
+export interface ChatRoomAuthRequest {
+  password?: string;
+  email?: string;
+  name?: string;
+}
+
+export interface ChatRoomAuthResponse {
+  status: 'authenticated' | 'needs_credentials';
+  credential_type?: 'password_and_email' | 'login_required';
+  access_type?: 'owner' | 'guest' | 'account';
+  agent_id?: string;
+  agent_name?: string;
+  session_token?: string;
+}
+
 // ========== AGENT LIMITS INTERFACE ==========
 export interface AgentLimits {
   agents_created: number;
@@ -1184,4 +1201,115 @@ export async function reactivateShareLink(
  */
 export async function getUserBalance(): Promise<UserBalance> {
   return apiCall<UserBalance>('/agent/user/balance', {}, true);
+}
+
+
+/**
+ * Get shared chat history
+ */
+export async function getSharedChatHistory(
+  shareToken: string,
+  sessionToken?: string,
+  limit: number = 50
+): Promise<{
+  agent_name: string;
+  total_messages: number;
+  messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    audio_url: string | null;
+    credits_used: number;
+    created_at: string;
+  }>;
+}> {
+  const headers: Record<string, string> = {};
+  
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken;
+  }
+  
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/share/${shareToken}/history?limit=${limit}`,
+    { headers }
+  );
+  
+  if (!response.ok) throw new APIError('Failed to load chat history', response.status);
+  
+  return response.json();
+}
+
+/**
+ * Get session stats
+ */
+export async function getSessionStats(
+  shareToken: string,
+  sessionToken?: string
+): Promise<{
+  messages_sent: number;
+  credits_used: number;
+  owner_balance: number;
+  max_messages_per_hour: number;
+}> {
+  const headers: Record<string, string> = {};
+  
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken;
+  }
+  
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/share/${shareToken}/session-stats`,
+    { headers }
+  );
+  
+  if (!response.ok) throw new APIError('Failed to load stats', response.status);
+  
+  return response.json();
+}
+
+
+/**
+ * 🔒 UNIFIED CHAT ROOM AUTHENTICATION
+ * Authenticates any chat room access (owner, guest, or account-required)
+ * Server handles all logic - returns what client needs
+ */
+export async function authenticateChatRoom(
+  token: string,
+  credentials?: ChatRoomAuthRequest
+): Promise<ChatRoomAuthResponse> {
+  const userToken = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add JWT token if user is logged in
+  if (userToken) {
+    headers['Authorization'] = `Bearer ${userToken}`;
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/agent/chat-room/${token}/authenticate`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(credentials || {})
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Authentication failed', response.status);
+  }
+  
+  return response.json();
 }

@@ -119,7 +119,7 @@ export default function AgentCreationPage() {
       
       // Redirect after 2 seconds to agents page
       setTimeout(() => {
-        router.push(`/dashboard/agents/${agent.id}`);
+        router.push(`/agents/${agent.id}`);
       }, 2000);
     } catch (error) {
       console.error('Error creating agent:', error);
