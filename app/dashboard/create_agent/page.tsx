@@ -234,7 +234,7 @@ export default function AgentCreationPage() {
           </div>
         </div>
 
-                  {/* Agent Limits Display */}
+         {/* Agent Limits Display */}
           {agentLimits && (
             <div className="inline-flex flex-row items-center  mb-3 gap-2 bg-gray-300/50 border
              border-slate-200 rounded-full px-6 py-2 mt-4">

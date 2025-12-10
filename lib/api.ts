@@ -284,6 +284,42 @@ export interface VoiceChatResponse {
   transcribed_text?: string; // The text that was recognized from voice
 }
 
+// ========== SPEECH-TO-TEXT INTERFACES ==========
+export interface TranscribeRequest {
+  audio_file: File;
+  language?: string;
+}
+
+export interface TranscribeResponse {
+  id: string;
+  text: string;
+  method: "whisper" | "google";
+  language: string;
+  duration: number;
+  original_filename: string;
+  credits_used: number;
+  user_balance: number;
+  download_urls: {
+    txt: string;
+    pdf: string;
+  };
+  created_at: string;
+}
+
+export interface TranscriptionHistory {
+  id: string;
+  original_filename: string;
+  text_preview: string;
+  duration: number;
+  language: string;
+  method: string;
+  credits_used: number;
+  created_at: string;
+  download_urls: {
+    txt: string;
+    pdf: string;
+  };
+}
 
 // ========== TOKEN MANAGEMENT (IMPROVED) ==========
 const TOKEN_KEY = 'access_token';
@@ -1312,4 +1348,119 @@ export async function authenticateChatRoom(
   }
   
   return response.json();
+}
+
+
+// ========== SPEECH-TO-TEXT API FUNCTIONS ==========
+
+/**
+ * 🎙️ Transcribe audio file to text
+ */
+export async function transcribeAudio(
+  audioFile: File,
+  language: string = "en"
+): Promise<TranscribeResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+  const formData = new FormData();
+  formData.append('audio_file', audioFile);
+  formData.append('language', language);
+  
+  // ✅ Use direct fetch for FormData (Content-Type must be auto-set)
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/tts/transcribe`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+  
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+  
+  if (response.status === 402) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Insufficient credits', 402);
+  }
+  
+  if (response.status === 429) {
+    throw new APIError('Rate limit exceeded - please wait before trying again', 429);
+  }
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(
+      error.detail || 'Transcription failed',
+      response.status
+    );
+  }
+  
+  return response.json();
+}
+
+/**
+ * 📥 Download transcription file
+ */
+export async function downloadTranscription(
+  transcriptionId: string,
+  format: 'txt' | 'pdf'
+): Promise<Blob> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/tts/transcription/${transcriptionId}/download/${format}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(
+      error.detail || 'Download failed',
+      response.status
+    );
+  }
+  
+  return response.blob();
+}
+
+/**
+ * 📜 Get transcription history
+ */
+export async function getTranscriptionHistory(
+  limit: number = 50
+): Promise<TranscriptionHistory[]> {
+  return apiCall<TranscriptionHistory[]>(
+    `/tts/transcriptions/history?limit=${limit}`,
+    {},
+    true
+  );
+}
+
+/**
+ * 🗑️ Delete a transcription
+ */
+export async function deleteTranscription(transcriptionId: string): Promise<void> {
+  await apiCall<void>(`/tts/transcription/${transcriptionId}`, {
+    method: 'DELETE',
+  }, true);
 }
