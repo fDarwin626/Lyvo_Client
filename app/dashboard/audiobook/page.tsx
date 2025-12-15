@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import AudioPlayer from '@/components/AudioPlayer';
 import { getVoices, Voices, getToken, getRandomVoices, generateAudiobookFromFile } from '@/lib/api';
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 
 
@@ -16,7 +17,7 @@ function GenarateAudiobook () {
   const [loading, setLoading] = useState(true);
   const [filteredVoices, setFilteredVoices] = useState<Voices[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<Voices | null>(null);
-    const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedAudiobookVoice, setSelectedAudiobookVoice] = useState<Voices | null>(null);
@@ -28,7 +29,7 @@ function GenarateAudiobook () {
 
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [completedAudiobook, setCompletedAudiobook] = useState<any>(null); 
-
+  const {deductCredits} = useCreditBalance();
 
 // Add polling function
 useEffect(() => {
@@ -49,7 +50,12 @@ useEffect(() => {
       setPollingJobId(null);
       setIsGenerating(false);
       setCompletedAudiobook(status);
+      
+      if (status.credit_used) {
+        deductCredits(status.credit_used)
+        console.log(`📕 Audiobook completed. Credits used: ${status.credit_used}`);
 
+      }
       } else if (status.status === 'failed') {
         setPollingJobId(null);
         setIsGenerating(false);
@@ -66,7 +72,7 @@ useEffect(() => {
   const interval = setInterval(checkStatus, 5000);
   
   return () => clearInterval(interval);
-}, [pollingJobId]);
+}, [pollingJobId, deductCredits]);
 
 
 
@@ -146,15 +152,11 @@ const handleGenerateAudiobook = async () => {
       author || null,
       selectedAudiobookVoice.id
     );
-    
     if (result.status === 'processing') {
       // Start polling for status
       setPollingJobId(result.id);
       // Keep isGenerating = true, it will be set to false when complete
-    } else {
-      setIsGenerating(false);
-      alert(`Audiobook ready! Duration: ${result.duration}s`);
-    }
+    } 
     
   } catch (error: any) {
     setGenerationError(error.message);
@@ -165,9 +167,11 @@ const handleGenerateAudiobook = async () => {
     return(
         <ProtectedRoute>
             <div className="border rounded-2xl border-white bg-black/35 flex flex-row overflow-hidden">
-                <div className="text-2xl font-semibold flex flex-col px-10 py-6 flex-shrink-0">
+                <div className="text-sm lg:text-2xl font-semibold flex flex-col px-1 py-6 
+                lg:px-10 lg:py-6 flex-shrink-0 ">
                     <h1 className="font-amiamie text-black">Cutting edge voices</h1>
-                    <p className='text-sm text-white whitespace-nowrap'>world most innovative voice platform</p>
+                    <p className='text-sm font-normal lg:text-sm lg:font-medium tracking-tight
+                      text-white whitespace-nowrap'>world most innovative voice platform</p>
                 </div>
                 <div className="flex flex-row items-center justify-end gap-0.3 ml-auto flex-shrink-0">
                     <img src='\images\pink-hair.jpg' width='100' className='rounded-l-xl object-cover' alt="Voice 1"/>
@@ -186,43 +190,43 @@ const handleGenerateAudiobook = async () => {
                         width="15" height="24"  className="text-gray-500" /></Link>
                     </h2>
                     {loading ? (
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
                         {[...Array(6)].map((_, i)=> (
-                                   <div key={i} className="animate-pulse flex items-start gap-3 p-4">
-                                <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                                   <div key={i} className="animate-pulse flex items-start gap-2 md:gap-3 p-2 md:p-4">
+                                <div className="w-8 h-8 md:w-12 md:h-12 bg-gray-200 rounded-full"></div>
                                 <div className="flex-1">
-                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                    <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                    <div className="h-3 md:h-4 bg-gray-200 rounded w-3/4 mb-1 md:mb-2"></div>
+                                    <div className="h-2 md:h-3 bg-gray-200 rounded w-full mb-1 md:mb-2"></div>
+                                    <div className="h-2 md:h-3 bg-gray-200 rounded w-1/2"></div>
                                 </div>
                             </div>                    
                         ))}
                     </div>
                     ):(
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
                         {recentVoices.map((voice) => (
-                         <div key={voice.id} className="flex items-start gap-3 p-4
+                         <div key={voice.id} className="flex items-start gap-2 md:gap-3 p-2 md:p-4
                           rounded-4xl hover:bg-gray-100 cursor-pointer group">
 
                             <div 
                               onClick={() => handlePlayVoice(voice)}
-                              className="border p-4 rounded-xl border-gray-200 bg-gray-200 flex-shrink-0 cursor-pointer
+                              className="border p-2 md:p-4 rounded-xl border-gray-200 bg-gray-200 flex-shrink-0 cursor-pointer
                                hover:bg-gray-100 transition-colors"
                             >
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br
+                              <div className="w-6 h-6 md:w-10 md:h-10 rounded-full bg-gradient-to-br
                               from-[#43C6AC] to-[#191654]
-                                  flex items-center justify-center text-white font-amiamie uppercase">
+                                  flex items-center justify-center text-white font-amiamie uppercase text-xs md:text-base">
                                   {voice.display_name?.charAt(0) || voice.name.charAt(0)}
                               </div>
                              </div>  
                              <div className="flex flex-col min-w-0 flex-1">
-                                    <h3 className='font-amiamie font-normal text-sm truncate'>
+                                    <h3 className='font-amiamie font-normal text-xs md:text-sm truncate'>
                                         {voice.display_name}
                                     </h3>
-                                    <p className='text-sm text-secondary line-clamp-2'>{voice.description}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-xs">🇺🇸🇯🇵</span>
-                                        <span className="text-xs text-gray-600">English +10</span>
+                                    <p className='text-xs md:text-sm text-secondary truncate md:line-clamp-2'>{voice.description}</p>
+                                    <div className="flex items-center gap-1 md:gap-2 mt-1">
+                                        <span className="text-[10px] md:text-xs">🇺🇸🇯🇵</span>
+                                        <span className="text-[10px] md:text-xs text-gray-600">English +10</span>
                                     </div>
                              </div>
                         </div>

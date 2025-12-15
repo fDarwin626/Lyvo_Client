@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import { cloneVoice, getMyClones, deleteClone, type ClonedVoice } from "@/lib/api"
 import { Mic, Upload, Trash2, Play, Pause, Square, StopCircle } from "lucide-react"
 import { Icon } from "@iconify/react";
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 // Register ScrollTrigger plugin
 if (typeof window !== "undefined") {
@@ -27,7 +28,8 @@ function VoiceCloningPage () {
     const velocityRef = useRef({ x: 0, y: 0 });
     const animationRef = useRef<number | null>(null);
     const [isTextOutside, setIsTextOutside] = useState(false);
-    
+    const {deductCredits} = useCreditBalance();
+
     // ========== NEW VOICE CLONING STATE ==========
     const [clones, setClones] = useState<ClonedVoice[]>([])
     const [loading, setLoading] = useState(true)
@@ -293,43 +295,50 @@ function VoiceCloningPage () {
         }
     }
 
-    // Handle clone submission
-    async function handleClone() {
-        if (!voiceName.trim()) {
-            setError("Voice name is required")
-            return
+            
+     // Handle clone submission
+async function handleClone() {
+    if (!voiceName.trim()) {
+        setError("Voice name is required")
+        return
+    }
+    
+    if (!audioFile) {
+        setError("Please record or upload audio")
+        return
+    }
+
+    try {
+        setCloning(true)
+        setError("")
+        setSuccess("")
+        
+        const result = await cloneVoice(audioFile, voiceName, description)
+        
+        // ✅ NOW DEDUCT CREDITS IN FRONTEND
+        if (result.credits_used) {
+            deductCredits(result.credits_used);  // Optimistic update
+            console.log(`🎙️ Voice cloned. Credits used: ${result.credits_used}`);
         }
         
-        if (!audioFile) {
-            setError("Please record or upload audio")
-            return
-        }
-
-        try {
-            setCloning(true)
-            setError("")
-            setSuccess("")
-            
-            const result = await cloneVoice(audioFile, voiceName, description)
-            
-            setSuccess(`Voice "${voiceName}" cloned successfully! ${result.clones_remaining} clones remaining.`)
-            
-            // Reset form
-            setVoiceName("")
-            setDescription("")
-            setAudioFile(null)
-            setRecordedBlob(null)
-            setRecordingTime(0)
-            
-            // Refresh clones list
-            fetchClones()
-            
-        } catch (err: any) {
-            setError(err.message)
-        } finally {
-            setCloning(false)
-        }
+        setSuccess(`Voice "${voiceName}" cloned successfully! ${result.clones_remaining} clones remaining.`)
+        
+        // Reset form
+        setVoiceName("")
+        setDescription("")
+        setAudioFile(null)
+        setRecordedBlob(null)
+        setRecordingTime(0)
+        
+        // Refresh clones list
+        fetchClones()
+        
+    } catch (err: any) {
+        setError(err.message)
+    } finally {
+        setCloning(false)
     }
+}       
 
     // Handle delete clone
     async function handleDelete(id: string, name: string) {

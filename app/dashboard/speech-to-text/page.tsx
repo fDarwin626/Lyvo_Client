@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { transcribeAudio, downloadTranscription, getUserBalance, APIError } from '@/lib/api';
 import { Icon } from '@iconify/react';
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 export default function SpeechToTextPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function SpeechToTextPage() {
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
+  const {deductCredits} =  useCreditBalance();
   // Processing State
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
@@ -28,20 +29,7 @@ export default function SpeechToTextPage() {
   
   // UI State
   const [error, setError] = useState('');
-  const [balance, setBalance] = useState<number | null>(null);
 
-  // Load user balance on mount
-  useState(() => {
-    async function loadBalance() {
-      try {
-        const data = await getUserBalance();
-        setBalance(data.balance);
-      } catch (err) {
-        console.error('Failed to load balance:', err);
-      }
-    }
-    loadBalance();
-  });
 
   // ========== FILE UPLOAD HANDLERS ==========
   
@@ -108,10 +96,7 @@ export default function SpeechToTextPage() {
       // Step 1: Upload and transcribe
       setProgress('Processing audio with AI...');
       const result = await transcribeAudio(selectedFile);
-      
-      // Step 2: Update balance
-      setBalance(result.user_balance);
-      
+
       // Step 3: Show results
       setTranscription({
         id: result.id,
@@ -120,7 +105,7 @@ export default function SpeechToTextPage() {
         duration: result.duration,
         filename: result.original_filename
       });
-      
+      deductCredits(result.credits_used);
       setProgress('✅ Transcription complete!');
       
     } catch (err: any) {

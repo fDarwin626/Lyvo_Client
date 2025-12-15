@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { getVoices, Voices, getToken, generateSpeech, waitForGeneration } from '@/lib/api';
 import Link from 'next/link';
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 function GenerateContent() {
   const searchParams = useSearchParams();
@@ -15,7 +16,8 @@ function GenerateContent() {
   const [loading, setLoading] = useState(false);
   const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
   const [error, setError] = useState('');
-
+  const {deductCredits} = useCreditBalance();
+  
   useEffect(() => {
     async function loadVoices() {
       try {
@@ -63,10 +65,17 @@ const handleGenerate = async () => {
     const finalStatus = await waitForGeneration(
       result.id,
       (status) => {
-        // Optional: You can show status to user
+        // Optional: show status to user
         console.log('Generation status:', status);
       }
     );
+
+    // ✅ Deduct credits from final status
+    if (finalStatus.credit_used) {
+      deductCredits(finalStatus.credit_used);
+      console.log(`💳 TTS completed. Credits used: ${finalStatus.credit_used}`);
+    }
+
     
     // Step 3: Set the audio URL
     if (finalStatus.audio_url) {

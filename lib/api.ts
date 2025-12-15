@@ -53,6 +53,7 @@ export interface AudiobookJob {
   audio_url?: string;
   duration?: number;
   created_at: string;
+  credit_used: number;
 }
 
 export interface TTSHistory {
@@ -73,15 +74,36 @@ export interface ClonedVoice {
   status: string;
   clones_remaining?: number;
   created_at?: string;
+  credits_used?: number;
 }
 
 
 // ========== USER BALANCE ==========
-
-export interface UserBalance {
-  balance: number;
+export interface UserProfile {
+  id: string;
   email: string;
-  is_admin: boolean;
+  user_name: string | null;
+  auth_provider: string;
+  is_verified: boolean;
+  is_active: boolean;
+  
+  // Tier info
+  plan_tier: number;
+  tier_name: string;
+  free_credits: number;
+  paid_credits: number;
+  total_credits: number;
+  
+  // Limits
+  max_agents: number;
+  agents_used: number;
+  max_clones: number;
+  clones_used: number;
+  
+  // Premium access
+  premium_unlocked: boolean;
+  
+  created_at: string;
 }
 // ========== SHARE SYSTEM INTERFACES ==========
 export interface CreateShareLinkRequest {
@@ -321,6 +343,55 @@ export interface TranscriptionHistory {
   };
 }
 
+
+//============ PAYMENT INSTERFACE ============
+export interface InitializePaymentRequest{
+  amount: number;
+  currency: 'NGN' | 'USD'
+}
+
+
+export interface InitializePaymentResponse {
+  success: boolean;
+  payment_link: string;
+  transaction_ref: string;
+  amount: number;
+  currency: string;
+  credits: number;
+  message: string;
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean;
+  verified: boolean;
+  credits_added: number;
+  new_balance: number;
+  transaction_ref: string;
+  amount: number;
+  currency: string;
+  payment_type: string | null;
+  message: string;
+}
+
+export interface PaymentHistoryItem {
+  id: string;
+  transaction_ref: string;
+  amount: number;
+  currency: string;
+  credits_purchased: number;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  payment_method: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface PaymentHistoryResponse {
+  total_payments: number;
+  total_spent: number;
+  total_credits_purchased: number;
+  payments: PaymentHistoryItem[];
+}
+
 // ========== TOKEN MANAGEMENT (IMPROVED) ==========
 const TOKEN_KEY = 'access_token';
 const TOKEN_EXPIRY_KEY = 'token_expiry';
@@ -539,6 +610,7 @@ export interface GenerateResponse {
   audio_url: string;
   duration: number;
   voice_name: string;
+  credit_used: number;
 }
 
 export async function generateSpeech(
@@ -708,6 +780,7 @@ export interface GenerationStatus {
   audio_url: string | null;
   duration: number | null;
   voice_name: string;
+  credit_used: number;
 }
 
 // ========== ADMIN INTERFACE ========
@@ -1235,10 +1308,9 @@ export async function reactivateShareLink(
 /**
  * 💰 Get user's current credit balance
  */
-export async function getUserBalance(): Promise<UserBalance> {
-  return apiCall<UserBalance>('/agent/user/balance', {}, true);
+export async function getUserProfile(): Promise<UserProfile> {
+  return apiCall<UserProfile>('/auth/me', {}, true);
 }
-
 
 /**
  * Get shared chat history
@@ -1463,4 +1535,107 @@ export async function deleteTranscription(transcriptionId: string): Promise<void
   await apiCall<void>(`/tts/transcription/${transcriptionId}`, {
     method: 'DELETE',
   }, true);
+}
+
+
+// ========== PAYMENT API FUNCTIONS ==========
+
+/**
+ * 💳 Initialize payment (get Flutterwave payment link)
+ */
+export async function initializePayment(
+  amount: number,
+  currency: 'NGN' | 'USD'
+): Promise<InitializePaymentResponse> {
+  return apiCall<InitializePaymentResponse>('/payments/initialize', {
+    method: 'POST',
+    body: JSON.stringify({ amount, currency }),
+  }, true);
+}
+
+/**
+ * ✅ Verify payment after user completes payment
+ */
+export async function verifyPayment(
+  transactionId: number
+): Promise<VerifyPaymentResponse> {
+  return apiCall<VerifyPaymentResponse>(
+    `/payments/verify/${transactionId}`,
+    {},
+    true
+  );
+}
+
+/**
+ * 📜 Get payment history
+ */
+export async function getPaymentHistory(): Promise<PaymentHistoryResponse> {
+  return apiCall<PaymentHistoryResponse>('/payments/history', {}, true);
+}
+
+/**
+ * 🧮 Calculate credits from amount
+ * Client-side validation before sending to backend
+ */
+export function calculateCreditsFromAmount(
+  amount: number,
+  currency: 'NGN' | 'USD'
+): {
+  valid: boolean;
+  credits: number;
+  error: string | null;
+} {
+  const PRICE_PER_1000 = {
+    USD: 103,      // $1.03 in cents
+    NGN: 153730    // ₦1,537.30 in kobo
+  };
+  
+  const priceUnit = PRICE_PER_1000[currency];
+  
+  // Check if exact multiple
+  if (amount % priceUnit !== 0) {
+    const symbol = currency === 'USD' ? '$' : '₦';
+    const priceDisplay = (priceUnit / 100).toFixed(2);
+    return {
+      valid: false,
+      credits: 0,
+      error: `Amount must be exact multiple of ${symbol}${priceDisplay} (1000 credits)`
+    };
+  }
+  
+  // Calculate credits
+  const multiplier = Math.floor(amount / priceUnit);
+  const credits = multiplier * 1000;
+  
+  // Minimum check
+  if (credits < 1000) {
+    const symbol = currency === 'USD' ? '$' : '₦';
+    const priceDisplay = (priceUnit / 100).toFixed(2);
+    return {
+      valid: false,
+      credits: 0,
+      error: `Minimum purchase: 1000 credits (${symbol}${priceDisplay})`
+    };
+  }
+  
+  return {
+    valid: true,
+    credits,
+    error: null
+  };
+}
+
+/**
+ * 💰 Format amount for display
+ */
+export function formatAmount(amount: number, currency: 'NGN' | 'USD'): string {
+  const value = amount / 100;
+  
+  if (currency === 'USD') {
+    return `$${value.toFixed(2)}`;
+  } else if (currency === 'NGN') {
+    return `₦${value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  
+  return `${currency} ${value.toFixed(2)}`;
 }

@@ -56,36 +56,43 @@ export default function AudioPlayer({ audioUrl, voiceName, onClose }: AudioPlaye
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-transparent 
-    px-6 py-3 flex items-center gap-4 z-50 animate-fade-in">
+    <div className="fixed bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 
+    bg-transparent px-4 sm:px-6 py-3 sm:py-3
+    flex items-center justify-center sm:justify-start gap-2 sm:gap-4 z-50 animate-fade-in
+    w-[95%] sm:w-auto max-w-md sm:max-w-none">
       <audio ref={audioRef} src={`http://127.0.0.1:8000${audioUrl}`} />
       
       {/* Voice Name */}
-      <span className="text-2xl  font-amiamie font-medium text-gray-900">{voiceName}</span>
+      <span className="text-xl sm:text-xl font-amiamie font-medium text-gray-900 truncate sm:flex-initial">
+        {voiceName}
+      </span>
       
       {/* Play/Pause Button */}
       <button
         onClick={togglePlay}
-        className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+        className="w-10 h-10 sm:w-10 sm:h-10 bg-black rounded-full 
+        flex items-center justify-center flex-shrink-0
+        hover:bg-gray-800 transition-colors"
       >
         {isPlaying ? (
-            <Icon icon="game-icons:pause-button" width="15" height="12"  className="text-[#ffffff]" />
+          <Icon icon="game-icons:pause-button" width="15" height="15" className="text-white" />
         ) : (
-            <Icon icon="gridicons:play" width="24" height="24"  className="text-white" />
+          <Icon icon="gridicons:play" width="20" height="20" className="text-white" />
         )}
       </button>
       
       {/* Time Display */}
-      <span className="text-xs text-gray-600 font-mono">
+      <span className="text-[10px] sm:text-xs text-gray-600 font-mono whitespace-nowrap">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
       
       {/* Close Button */}
       <button
         onClick={onClose}
-        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+        className="w-8 h-8 sm:w-8 sm:h-8 rounded-full flex-shrink-0
+        hover:bg-gray-100 flex items-center justify-center transition-colors"
       >
-        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>

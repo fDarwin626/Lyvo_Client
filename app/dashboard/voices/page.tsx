@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { getVoices, Voices } from '@/lib/api';
 import AudioPlayer from '@/components/AudioPlayer';
-import Link from 'next/link';
 import { Icon } from '@iconify/react';
 
 export default function VoicesPage() {
@@ -14,11 +13,9 @@ export default function VoicesPage() {
   const [filteredVoices, setFilteredVoices] = useState<Voices[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'male' | 'female'>('all');
-  
-  // Audio Player State
   const [playingVoice, setPlayingVoice] = useState<Voices | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
-
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadVoices() {
@@ -61,6 +58,11 @@ export default function VoicesPage() {
 
   const handleUseVoice = (voiceId: string, route: string) => {
     router.push(`${route}?voice=${voiceId}`);
+    setOpenMenuId(null);
+  };
+
+  const toggleMenu = (voiceId: string) => {
+    setOpenMenuId(openMenuId === voiceId ? null : voiceId);
   };
 
   return (
@@ -168,16 +170,19 @@ export default function VoicesPage() {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2">
-                      
-
                       {/* 3-Dot Menu */}
                       <div className="relative group">
-                        <button className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-                            <Icon icon="flowbite:dots-vertical-outline" width="24" height="24"  className="text-gray-600" />
+                        <button 
+                          onClick={() => toggleMenu(voice.id)}
+                          className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                        >
+                          <Icon icon="flowbite:dots-vertical-outline" width="24" height="24" className="text-gray-600" />
                         </button>
 
                         {/* Dropdown Menu */}
-                        <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                        <div className={`absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-48 transition-all z-10 md:opacity-0 md:invisible md:group-hover:opacity-100 md:group-hover:visible ${
+                          openMenuId === voice.id ? 'opacity-100 visible' : 'opacity-0 invisible'
+                        }`}>
                           <button
                             onClick={() => handleUseVoice(voice.id, 'generate')}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -194,7 +199,6 @@ export default function VoicesPage() {
                             Use for AudioBook
                           </button>
 
-                          
                           <button
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                           >

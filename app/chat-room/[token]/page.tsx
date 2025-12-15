@@ -1,5 +1,5 @@
 'use client';
-
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
@@ -68,10 +68,20 @@ export default function ChatRoomPage() {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   
   // Credits Display
-  const [ownerBalance, setOwnerBalance] = useState<number>(0);
-  const [initialBalance, setInitialBalance] = useState<number>(10000);
-  const [creditsUsedThisSession, setCreditsUsedThisSession] = useState<number>(0);
-  
+//  USE GLOBAL CONTEXT FOR OWNER, LOCAL STATE FOR SHARED USERS
+const { balance: globalBalance, totalCredits: globalTotal,
+   percentage: globalPercentage, deductCredits, refreshBalance } = useCreditBalance();
+
+// Local state for shared users (to display owner's balance without modifying global context)
+const [sharedOwnerBalance, setSharedOwnerBalance] = useState<number>(0);
+const [sharedInitialBalance, setSharedInitialBalance] = useState<number>(1000);
+
+// Computed values based on access type
+const displayBalance = accessType === 'owner' ? globalBalance : sharedOwnerBalance;
+const displayTotal = accessType === 'owner' ? globalTotal : sharedInitialBalance;
+const displayPercentage = accessType === 'owner' ? globalPercentage : 
+  (sharedInitialBalance > 0 ? (sharedOwnerBalance / sharedInitialBalance) * 100 : 0); 
+
   // Rate Limiting Display
   const [messagesThisHour, setMessagesThisHour] = useState<number>(0);
   const [maxMessagesPerHour] = useState<number>(20);
@@ -315,12 +325,11 @@ const clearSessionFromLocalStorage = () => {
       
       // Load stats
       const stats = await getSessionStats(token, sessionToken || undefined);
-      setOwnerBalance(stats.owner_balance);
+      setSharedOwnerBalance(stats.owner_balance);
       setMessagesThisHour(stats.messages_sent);
-      setCreditsUsedThisSession(stats.credits_used);
       
       // Calculate real initial balance
-      setInitialBalance(stats.owner_balance + stats.credits_used);
+       setSharedInitialBalance(stats.owner_balance + stats.credits_used);
       
       console.log('✅ Loaded shared user data:', formattedMessages.length, 'messages');
       console.log('💰 Credits:', stats.owner_balance, '/', stats.owner_balance + stats.credits_used);
@@ -346,15 +355,13 @@ const clearSessionFromLocalStorage = () => {
       
       // Load balance
       const balanceData = await getUserBalance();
-      setOwnerBalance(balanceData.balance);
+      await refreshBalance();
       
       // Calculate real initial balance
       const totalCreditsUsed = history.messages
         .filter(msg => msg.role === 'assistant')
         .reduce((sum, msg) => sum + msg.credits_used, 0);
       
-      setInitialBalance(balanceData.balance + totalCreditsUsed);
-      setCreditsUsedThisSession(totalCreditsUsed);
       
       console.log('✅ Loaded owner data:', formattedMessages.length, 'messages');
       console.log('💰 Credits:', balanceData.balance, '/', balanceData.balance + totalCreditsUsed);
@@ -451,11 +458,11 @@ const clearSessionFromLocalStorage = () => {
             // ✅ SECURITY: Owner always uses verified agentId (never URL token)
             console.log(`📤 [OWNER] Sending to agent ${agentId.substring(0, 20)}...`);
             
-            response = await chatWithAgent(agentId, {  // agentId is now guaranteed to be UUID
+            response = await chatWithAgent(agentId, { 
                 message: inputMessage,
                 audio_enabled: voiceEnabled
             });
-            setOwnerBalance(response.user_balance);
+            deductCredits(response.credits_used);
             
         } else {
             // ✅ SECURITY: Shared users use URL token (share token) + session
@@ -469,7 +476,7 @@ const clearSessionFromLocalStorage = () => {
                 },
                 sessionToken || undefined
             );
-            setOwnerBalance(response.owner_balance);
+            setSharedOwnerBalance(response.owner_balance); 
             setMessagesThisHour(prev => prev + 1);
         }
 
@@ -480,7 +487,6 @@ const clearSessionFromLocalStorage = () => {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, agentMessage]);
-      setCreditsUsedThisSession(prev => prev + response.credits_used);
 
       if (voiceEnabled && response.audio_url) {
         if (response.audio_url.includes('/audio-status')) {
@@ -555,14 +561,13 @@ const clearSessionFromLocalStorage = () => {
     console.log(`🎙️ [OWNER] Sending voice to agent ${agentId.substring(0, 20)}...`);
     
     response = await chatWithAgentVoice(agentId, audioFile, voiceEnabled);
-    setOwnerBalance(response.user_balance);
-    
+    deductCredits(response.credits_used);    
     } else {
         // ✅ SECURITY: Shared users use share token
         console.log(`🎙️ [SHARED] Sending voice via share token ${token.substring(0, 20)}...`);
         
         response = await shareChatVoice(token, audioFile, voiceEnabled, sessionToken || undefined);
-        setOwnerBalance(response.owner_balance);
+        setSharedOwnerBalance(response.owner_balance);
         setMessagesThisHour(prev => prev + 1);
     }
       const userMessage: Message = {
@@ -580,7 +585,6 @@ const clearSessionFromLocalStorage = () => {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, agentMessage]);
-      setCreditsUsedThisSession(prev => prev + response.credits_used);
 
       if (voiceEnabled && response.audio_url) {
         if (response.audio_url.includes('/audio-status')) {
@@ -661,9 +665,6 @@ const clearSessionFromLocalStorage = () => {
 
   // ========== CREDIT CIRCLE CALCULATION ==========
   
-  const creditPercentage = initialBalance > 0 
-    ? Math.max(0, Math.min(100, (ownerBalance / initialBalance) * 100))
-    : 0;
   
   // Calculate rate limit percentage for shared users (0-20 messages)
   const rateLimitPercentage = maxMessagesPerHour > 0
@@ -671,7 +672,6 @@ const clearSessionFromLocalStorage = () => {
   : 0;
 
   const circumference = 2 * Math.PI * 40;
-  const strokeDashoffset = circumference - (creditPercentage / 100) * circumference;
 
   // ========== RENDER ==========
 
@@ -858,7 +858,8 @@ const clearSessionFromLocalStorage = () => {
                     strokeDasharray={circumference}
                     strokeDashoffset={
                       accessType === 'owner' 
-                        ? strokeDashoffset 
+                        ? circumference - (displayPercentage / 100) * circumference  
+ 
                         : circumference - (rateLimitPercentage / 100) * circumference
                     }
                     strokeLinecap="round"
@@ -866,7 +867,7 @@ const clearSessionFromLocalStorage = () => {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-amiamie text-white">{accessType === 'owner' 
-                ? `${Math.round(creditPercentage)}%`
+                ? `${Math.round(displayPercentage)}%`
                 : `${Math.round(rateLimitPercentage)}%`
               }</span>
                 </div>
@@ -878,7 +879,7 @@ const clearSessionFromLocalStorage = () => {
                 </p>
                 <p className="text-semibold font-amiamie-round text-white">
                 {accessType === 'owner' 
-                  ? `${ownerBalance.toLocaleString()} / ${initialBalance.toLocaleString()}`
+                  ? `${displayBalance.toLocaleString()} / ${displayTotal.toLocaleString()}`
                   : `${maxMessagesPerHour - messagesThisHour} / ${maxMessagesPerHour}`
                 }
               </p>

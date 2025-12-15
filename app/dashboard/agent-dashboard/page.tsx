@@ -13,6 +13,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { Mic, MicOff, Send, Volume2, VolumeX, Loader2, MoreVertical, MessageSquare, Link2, Trash2 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import CreateShareModal from '@/components/CreateShareModal';
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 
 interface Message {
@@ -28,6 +29,7 @@ export default function AgentsPage() {
   // Agents list
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(true);
+  const { deductCredits } = useCreditBalance();
 
   // Share modal state
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -209,7 +211,7 @@ export default function AgentsPage() {
     try {
       const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
       const response = await chatWithAgentVoice(selectedAgent.id, audioFile, voiceEnabled);
-
+      deductCredits(response.credits_used);
       const userMessage: Message = {
         id: Date.now().toString(),
         role: 'user',
@@ -260,6 +262,7 @@ export default function AgentsPage() {
         message: inputMessage,
         audio_enabled: voiceEnabled
       });
+      deductCredits(response.credits_used);
 
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),

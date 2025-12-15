@@ -119,7 +119,8 @@ export default function AgentCreationPage() {
       
       // Redirect after 2 seconds to agents page
       setTimeout(() => {
-        router.push(`/agents/${agent.id}`);
+          router.push(`/dashboard/agents/${agent.id}`);
+
       }, 2000);
     } catch (error) {
       console.error('Error creating agent:', error);
@@ -150,7 +151,8 @@ export default function AgentCreationPage() {
       {/* Success Popup */}
       {showSuccess && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-emerald-500/30 max-w-md mx-4 animate-in fade-in zoom-in duration-300">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl
+           shadow-2xl border border-emerald-500/30 max-w-md mx-4 animate-in fade-in zoom-in duration-300">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
                 <Check className="w-8 h-8 text-emerald-400" />

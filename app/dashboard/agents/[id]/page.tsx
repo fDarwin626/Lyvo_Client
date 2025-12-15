@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Mic, MicOff, Send, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { getAgent, chatWithAgent, chatWithAgentVoice, Agent } from '@/lib/api';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface Message {
 export default function AgentChatPage() {
   const params = useParams();
   const agentId = params?.id as string;
+  const { deductCredits } = useCreditBalance();
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -69,7 +71,7 @@ export default function AgentChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // ✅ NEW: Polling function for audio status
+  //  Polling function for audio status
   const pollForAudio = async (statusUrl: string, maxAttempts = 300) => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
     
@@ -93,6 +95,7 @@ export default function AgentChatPage() {
         console.log(`📊 Audio status (attempt ${i + 1}):`, data.status);
         
         if (data.status === 'completed' && data.audio_url) {
+
           console.log('✅ Audio ready, playing:', data.audio_url);
           playAudioResponse(data.audio_url);
           return;
@@ -222,6 +225,8 @@ export default function AgentChatPage() {
         if (response.audio_url.includes('/audio-status')) {
           await pollForAudio(response.audio_url);
         } else {
+          deductCredits(response.credits_used);
+
           playAudioResponse(response.audio_url);
         }
       }
@@ -252,6 +257,7 @@ export default function AgentChatPage() {
         message: inputMessage,
         audio_enabled: voiceEnabled
       });
+        deductCredits(response.credits_used);
 
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
