@@ -120,12 +120,20 @@ const handleGoogleError = () => {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2 text-primary">
-              Password
-            </label>
-            <div className="relative">
-              <input
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-primary">
+                  Password
+                </label>
+                <Link 
+                  href="/auth/forgot-password" 
+                  className="text-sm text-brand hover:text-brand/80 font-medium transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -162,7 +170,8 @@ const handleGoogleError = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-black text-white rounded-lg font-medium font-amiamie
+             hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>

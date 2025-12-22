@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, getAdminStats } from '@/lib/api'; // Import getAdminStats
+import AdminSidebar from '@/components/AdminSidebar';
 
 export default function AdminLayout({
   children,
@@ -74,5 +75,20 @@ export default function AdminLayout({
   }
 
   // Show admin panel (ONLY for authorized admins)
-  return <div className="min-h-screen bg-[#0a0e27]">{children}</div>;
+  return <div className="  bg-[#0a0e27] h-screen flex overflow-hidden">
+            {/* SIDEBAR COMPONENT - 60% width on mobile, slides in from left */}
+            <div className="
+              fixed lg:relative inset-y-0 left-0 z-50
+              transform transition-transform duration-300 ease-in-out
+              lg:translate-x-0
+              w-[60%] lg:w-auto
+            ">  
+            
+              <AdminSidebar/>
+            </div>
+    
+            {/* MAIN AREA - Right side */}  
+            <div className="flex-1 flex flex-col overflow-y-auto w-full">{children}</div>
+    
+    </div>;
 }

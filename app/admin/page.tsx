@@ -1,37 +1,40 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
-import { getAdminStats, AdminStats, removeToken } from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
+import { getAdminStats, AdminStats, removeToken, getAllPaymentsAdmin } from '@/lib/api';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [totalRevenue, setTotalRevenue] = useState(0);
   useEffect(() => {
     loadStats();
   }, []);
 
-  const loadStats = async () => {
-    try {
-      const data = await getAdminStats();
-      setStats(data);
-    } catch (err: any) {
-      // If unauthorized, silently redirect to home (NO error messages)
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        router.push('/');
-        return;
-      }
-      // For other errors, also redirect silently
+const loadStats = async () => {
+  try {
+    const data = await getAdminStats();
+    setStats(data);
+    
+    // ✅ Fetch real revenue from payments
+    const paymentsData = await getAllPaymentsAdmin();
+    setTotalRevenue(paymentsData.total_spent);
+  } catch (err: any) {
+    // If unauthorized, silently redirect to home (NO error messages)
+    if (err.statusCode === 401 || err.statusCode === 403) {
       router.push('/');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
-
+    // For other errors, also redirect silently
+    router.push('/');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleLogout = () => {
     removeToken();
     router.push('/signin');
@@ -101,12 +104,12 @@ export default function AdminDashboard() {
         {/* Top Stats Row */}
         <div className=" font-amiamie grid grid-cols-4 gap-6 mb-6">
           <TopStatCard
-            label="Total Sales"
-            value="$284,750"
-            change="+$857"
-            trend="up"
-            color="green"
-          />
+          label="Total Sales"
+          value={`$${(totalRevenue / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change={`+${stats?.total_users || 0} users`}
+          trend="up"
+          color="green"
+        />
           <TopStatCard
             label="Total Users"
             value={(stats?.total_users || 0).toLocaleString()}
@@ -349,12 +352,6 @@ export default function AdminDashboard() {
         {/* Bottom Stats Grid */}
         <div className="grid grid-cols-6 gap-6 mt-6">
           <BottomStatCard
-            icon={<Icon icon="iconoir:people-tag" width="32" className="text-purple-400" />}
-            label="Total Users"
-            value={(stats?.total_users || 0).toLocaleString()}
-            bgColor="bg-purple-500/10"
-          />
-          <BottomStatCard
             icon={<Icon icon="carbon:checkmark-outline" width="32" className="text-green-400" />}
             label="Active Users"
             value={(stats?.active_users || 0).toLocaleString()}
@@ -365,12 +362,6 @@ export default function AdminDashboard() {
             label="Total Voices"
             value={(stats?.total_voices || 0).toLocaleString()}
             bgColor="bg-yellow-500/10"
-          />
-          <BottomStatCard
-            icon={<Icon icon="mdi:comedy" width="32" className="text-pink-400" />}
-            label="Cloned Voices"
-            value={(stats?.cloned_voices || 0).toLocaleString()}
-            bgColor="bg-pink-500/10"
           />
           <BottomStatCard
             icon={<Icon icon="mynaui:music-waves" width="32" className="text-cyan-400" />}
@@ -384,10 +375,53 @@ export default function AdminDashboard() {
             value={(stats?.admin_actions_today || 0).toLocaleString()}
             bgColor="bg-orange-500/10"
           />
+
+
+        <BottomStatCard
+        icon={<Icon icon="mdi:bug" width="32" className="text-red-400" />}
+        label="Bug Reports"
+        value={(stats?.total_bugs || 0).toLocaleString()}
+        bgColor="bg-red-500/10"
+      />
+      <BottomStatCard
+        icon={<Icon icon="mdi:alert-circle" width="32" className="text-orange-400" />}
+        label="New Bugs"
+        value={(stats?.new_bugs || 0).toLocaleString()}
+        bgColor="bg-orange-500/10"
+      />
+      <BottomStatCard
+        icon={<Icon icon="mdi:ticket" width="32" className="text-yellow-400" />}
+        label="Open Tickets"
+        value={(stats?.open_tickets || 0).toLocaleString()}
+        bgColor="bg-yellow-500/10"
+      />
+      <BottomStatCard
+        icon={<Icon icon="mdi:alert" width="32" className="text-red-500" />}
+        label="High Priority"
+        value={(stats?.high_priority_tickets || 0).toLocaleString()}
+        bgColor="bg-red-600/10"
+      />
+      <BottomStatCard
+        icon={<Icon icon="mdi:robot" width="32" className="text-blue-400" />}
+        label="Bot Chats"
+        value={(stats?.total_conversations || 0).toLocaleString()}
+        bgColor="bg-blue-500/10"
+      />
+      <BottomStatCard
+        icon={<Icon icon="mdi:help-circle" width="32" className="text-purple-400" />}
+        label="Unknown Q's"
+        value={(stats?.unknown_questions || 0).toLocaleString()}
+        bgColor="bg-purple-600/10"
+      />
+
         </div>
 
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-4 gap-6 mt-6">
+        <div className="mt-10 mb-4 font-amiamie text-3xl">
+          <h2 className="text-white text-lg font-semibold font-amiamie">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-5 gap-6 mt-6">
           <ActionCard
             href="/admin/users"
             icon={<Icon icon="mdi:account-group" width="28" />}
@@ -409,18 +443,29 @@ export default function AdminDashboard() {
             description="Upload and clone voice"
             color="cyan"
           />
+
           <ActionCard
-            href="/admin/preview-editor"
-            icon={<Icon icon="mdi:pencil" width="28" />}
-            title="Edit Previews"
-            description="Update voice preview texts"
+            href="/admin/bugs"
+            icon={<Icon icon="mdi:bug" width="28" />}
+            title="Bug Reports"
+            description="Manage bug reports and comments"
+            color="red"
+          />
+          <ActionCard
+            href="/admin/payments"
+            icon={<Icon icon="mdi:cash" width="28" />}
+            title="Transactions"
+            description="View payment history"
             color="green"
           />
+
         </div>
       </div>
     </div>
   );
 }
+
+
 
 function TopStatCard({ label, value, change, trend, color }: {
   label: string;
@@ -472,13 +517,16 @@ function ActionCard({ href, icon, title, description, color }: {
   icon: ReactNode;
   title: string;
   description: string;
-  color: 'purple' | 'pink' | 'cyan' | 'green';
+  color: 'purple' | 'pink' | 'cyan' | 'green' | 'red' | 'yellow' | 'blue';
 }) {
   const colors: Record<string, string> = {
     purple: 'hover:border-purple-500/50 hover:bg-purple-500/5',
     pink: 'hover:border-pink-500/50 hover:bg-pink-500/5',
     cyan: 'hover:border-cyan-500/50 hover:bg-cyan-500/5',
-    green: 'hover:border-green-500/50 hover:bg-green-500/5'
+    green: 'hover:border-green-500/50 hover:bg-green-500/5',
+    red: 'hover:border-red-500/50 hover:bg-red-500/5',  
+    yellow: 'hover:border-yellow-500/50 hover:bg-yellow-500/5',
+    blue: 'hover:border-blue-500/50 hover:bg-blue-500/5',  
   };
 
   return (

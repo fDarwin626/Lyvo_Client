@@ -238,7 +238,7 @@ export default function AgentChatPage() {
     }
   };
 
-  // ✅ UPDATED: Text message with audio polling
+  //  Text message with audio polling
   const sendTextMessage = async () => {
     if (!inputMessage.trim() || !agent) return;
 
@@ -267,7 +267,7 @@ export default function AgentChatPage() {
       };
       setMessages(prev => [...prev, agentMessage]);
 
-      // ✅ NEW: Poll for audio if voice is enabled
+      //  Poll for audio if voice is enabled
       if (voiceEnabled && response.audio_url) {
         // Check if it's a status URL or direct audio URL
         if (response.audio_url.includes('/audio-status')) {
@@ -320,10 +320,11 @@ export default function AgentChatPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flax mb-4 font-amiamie font-semibold text-4xl">
+      <div className="flax lg:mb-4 mb-0 font-amiamie font-semibold text-4xl">
         <h1>Agent Chat Room:<span></span></h1>
       </div>
-      <div className="h-[670px] border p-5 mb-50 bg-gradient-to-br from-gray-900 via-slate-800 to-cyan-900 border-gray-400 rounded-3xl flex flex-col overflow-hidden">
+      <div className="lg:h-[670px]  h-fit border p-5 mb-50 bg-gradient-to-br from-gray-900
+       via-slate-800 to-cyan-900 border-gray-400 rounded-3xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="backdrop-blur-sm">
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -350,10 +351,12 @@ export default function AgentChatPage() {
             <div className={`absolute inset-0 rounded-full transition-all duration-300 ${
               isSpeaking ? 'animate-pulse scale-110' : 'scale-100'
             }`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-50"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500
+               rounded-full blur-2xl opacity-50"></div>
             </div>
             
-            <div className={`relative w-48 h-48 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ${
+            <div className={`relative lg:w-48 lg:h-48 w-30 h-30 rounded-full bg-gradient-to-br 
+            from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ${
               isSpeaking 
                 ? 'animate-[pulse_0.8s_ease-in-out_infinite] shadow-2xl shadow-blue-500/50' 
                 : 'shadow-xl'
@@ -361,8 +364,10 @@ export default function AgentChatPage() {
               <div className="absolute inset-4 flex items-center justify-center">
                 {isSpeaking && (
                   <>
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-ping"></div>
-                    <div className="absolute inset-2 rounded-full bg-gradient-to-r from-blue-500/30 to-purple-500/30 animate-pulse"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r
+                     from-blue-500/20 to-purple-500/20 animate-ping"></div>
+                    <div className="absolute inset-2 rounded-full bg-gradient-to-r
+                     from-blue-500/30 to-purple-500/30 animate-pulse"></div>
                   </>
                 )}
                 
@@ -426,7 +431,7 @@ export default function AgentChatPage() {
         {/* Input Area */}
         <div className="backdrop-blur-sm">
           <div className="max-w-4xl mx-auto px-6 py-4">
-            <div className="flex items-center gap-3">
+            <div className="flex lg:items-center  items-center justify-center gap-3">
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isProcessing}

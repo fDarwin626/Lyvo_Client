@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useTheme } from '@/app/contexts/ThemeContext';
 import { useCreditBalance } from '@/app/contexts/CreditContext';
+import SupportChatWidget from './chat/SupportChatWidget';
 
 export default function TopBar() {
   const [greeting, setGreeting] = useState('');
   const [timeColors, setTimeColors] = useState('');
   const [timeIcon, setTimeIcon] = useState('');
-  
+  const [showChat, setShowChat] = useState(false); // ✅ Control chat state
+
   const { theme, toggleTheme } = useTheme();
   const { userName, isLoading} = useCreditBalance();
 
@@ -60,14 +62,26 @@ export default function TopBar() {
           )}
         </button>
 
-        {/* Talk to Lyvo Button - Hide text on mobile */}
-        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1 bg-white dark:bg-surface text-black dark:text-primary 
-          border border-gray-400 dark:border-gray-600 rounded-full hover:bg-gray-800 hover:text-white 
-          dark:hover:bg-gray-700 transition-colors font-amiamie font-extralight text-xs sm:text-sm lg:text-base">
+        {/* ✅ Your TopBar Button - Controls the widget */}
+        <button 
+          onClick={() => setShowChat(!showChat)}
+          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1 bg-white dark:bg-surface
+           text-black dark:text-primary 
+            border border-gray-400 dark:border-gray-600 rounded-full hover:bg-gray-800 hover:text-white 
+            dark:hover:bg-gray-700 transition-colors font-amiamie font-extralight text-xs sm:text-sm lg:text-base"
+        >
           <Icon icon="mdi:message-text" width="16" height="16" className="sm:w-5 sm:h-5" />
-          <span className="hidden sm:inline font-medium">Talk to Lyvo</span>
+          <span className="hidden sm:inline font-medium">
+            {showChat ? 'Close Chat' : 'Talk to Lyvo'}
+          </span>
           <span className="sm:hidden font-medium">Chat</span>
         </button>
+
+        {/* ✅ Widget with external control */}
+        <SupportChatWidget 
+          isOpen={showChat}
+          onToggle={() => setShowChat(!showChat)}
+        />
       </div>
     </header>
   )

@@ -385,11 +385,11 @@ async function handleClone() {
             <div className="min-h-screen overflow-hidden">
                 {/* ========== EXISTING HERO SECTION (UNCHANGED) ========== */}
                 <div className="max-w-7xl mx-auto px-6 py-20">
-    
+
                     {/* Heading Section */}
-                    <div className="text-center mb-20">
-                        <h1 ref={headingRef} className="text-5xl md:text-7xl font-bold font-amiamie
-                         text-gray-900 mb-6 leading-tight">
+                    <div className="text-center mb-12 md:mb-20">
+                        <h1 ref={headingRef} className="text-2xl sm:text-4xl md:text-3xl lg:text-5xl font-bold font-amiamie
+                         text-gray-900 mb-4 md:mb-6 leading-tight px-4">
                             <span className="word inline-block">The</span>{' '}
                             <span className="word inline-block">Art</span>{' '}
                             <span className="word inline-block">of</span>{' '}
@@ -411,20 +411,19 @@ async function handleClone() {
                         
                     </div>
 
-                    {/* TORN PAPER BANNER SECTION */}
-                    <div className="relative mt-32">
+                     {/* TORN PAPER BANNER SECTION */}
+                     <div className="relative lg:mt-32 mt-5">
                         
                         <div 
                             ref={bannerRef} 
-                            className="relative w-full h-[500px] cursor-move select-none"
+                            className="relative w-full h-[100px] md:h-[500px] h-[300px] cursor-move select-none"
                             style={{
                                 transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
                                 transition: isDragging ? 'none' : 'transform 0.1s ease-out'
                             }}
                             onMouseDown={handleMouseDown}
                             onWheel={handleWheel}
-                        >
-                            
+                        >                            
                             {/* TOP TORN EDGE */}
                             <svg 
                                 className="absolute top-0 left-0 w-full h-16 z-20" 
@@ -482,12 +481,12 @@ async function handleClone() {
                                         transition: 'none'
                                     }}
                                 >
-                                    <div>
+                                    <div className="opacity-0 lg:opacity-100">
                                         <h2 className="text-xl font-bold font-amiamie-round text-white tracking-wider 
                                         uppercase drop-shadow-2xl">
                                             Voice
                                         </h2>
-                                        <h2 className="text-7xl font-bold font-amiamie-round text-white tracking-wider 
+                                        <h2 className="lg:text-7xl text-2xl font-bold font-amiamie-round text-white tracking-wider 
                                         uppercase drop-shadow-2xl mix-blend-difference">
                                             Cloning
                                         </h2>

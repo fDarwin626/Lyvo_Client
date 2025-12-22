@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getUserProfile  } from '@/lib/api';
+import { getUserProfile, isAuthenticated  } from '@/lib/api';
 
 // ========== TYPES ==========
 interface CreditContextType {
@@ -64,10 +64,18 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
    * ✅ FETCH REAL BALANCE FROM BACKEND
    * Calls GET /agent/user/balance
    */
+
 const refreshBalance = useCallback(async () => {
   try {
     setIsLoading(true);
     setError(null);
+
+    // ✅ CHECK AUTH FIRST
+    if (!isAuthenticated()) {
+      console.log('Not authenticated, skipping balance refresh');
+      setIsLoading(false);
+      return;
+    }
 
     const data = await getUserProfile();
     

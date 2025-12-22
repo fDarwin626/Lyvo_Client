@@ -1,5 +1,64 @@
 import { promises } from "dns";
 
+
+// ========== INPUT SANITIZATION ==========
+
+/**
+ * 🔒 SECURITY: Sanitize user input before sending to API
+ * Prevents XSS and injection attacks on the frontend
+ */
+function sanitizeInput(input: string): string {
+  if (!input) return '';
+  
+  return input
+    .trim()
+    // Remove any script tags
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove any event handlers (onclick, onerror, etc.)
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    // Remove javascript: protocol
+    .replace(/javascript:/gi, '')
+    // Remove data: protocol (can be used for XSS)
+    .replace(/data:text\/html/gi, '');
+}
+
+/**
+ * 🔒 SECURITY: Validate email format (more strict than backend)
+ */
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * 🔒 SECURITY: Validate password strength on frontend
+ */
+function validatePassword(password: string): { valid: boolean; error: string | null } {
+  if (password.length < 10) {
+    return { valid: false, error: 'Password must be at least 10 characters' };
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Password must contain uppercase letter' };
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Password must contain lowercase letter' };
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Password must contain number' };
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+    return { valid: false, error: 'Password must contain special character' };
+  }
+  
+  return { valid: true, error: null };
+}
+
+
+
 // ========== CONFIG & TYPES ==========
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const REQUEST_TIMEOUT = 500000; 
@@ -86,6 +145,7 @@ export interface UserProfile {
   auth_provider: string;
   is_verified: boolean;
   is_active: boolean;
+  is_admin: boolean;
   
   // Tier info
   plan_tier: number;
@@ -392,6 +452,185 @@ export interface PaymentHistoryResponse {
   payments: PaymentHistoryItem[];
 }
 
+
+// ========== BUG REPORT INTERFACES ==========
+
+/**
+ * Single bug report data
+ */
+export interface BugReport {
+  id: string;
+  user_id: string;
+  user_email: string;
+  title: string;
+  description: string;
+  browser: string | null;
+  os: string | null;
+  device_type: string | null;
+  page_url: string | null;
+  screenshot_url: string | null;
+  status: 'new' | 'in_progress' | 'resolved';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  hearts_count: number;
+  user_has_hearted: boolean;
+  comments_count: number;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
+/**
+ * Admin comment on bug
+ */
+export interface BugComment {
+  id: string;
+  admin_email: string;
+  comment: string;
+  created_at: string;
+}
+
+/**
+ * Bug list with pagination
+ */
+export interface BugListResponse {
+  bugs: BugReport[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Bug details with comments
+ */
+export interface BugDetailsResponse {
+  bug: BugReport;
+  comments: BugComment[];
+}
+
+/**
+ * Submit bug request
+ */
+export interface SubmitBugRequest {
+  title: string;
+  description: string;
+  browser?: string;
+  os?: string;
+  device_type?: string;
+  page_url?: string;
+  screenshot?: File;
+}
+
+
+// ========== NOTIFICATION INTERFACES ==========
+
+/**
+ * Single notification data
+ */
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  related_item_id: string | null;
+  created_at: string;
+  time_ago: string; // "2 hours ago", "3 days ago"
+}
+
+/**
+ * List of notifications with pagination
+ */
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Unread count for sidebar badge
+ */
+export interface UnreadCountResponse {
+  unread_count: number;
+}
+
+
+// ========== CHATBOT SUPPORT INTERFACES ==========
+
+/**
+ * Send message to support bot
+ */
+export interface ChatRequest {
+  message: string;
+  conversation_id?: string;  // Undefined = new conversation
+}
+
+/**
+ * Bot's response
+ */
+export interface ChatResponse {
+  type: 'answer' | 'escalate';
+  message: string;
+  conversation_id: string;
+  message_id: string;
+  ticket_id?: string;  // If escalated to human
+  sentiment: {
+    sentiment: string;
+    urgency: string;
+    should_escalate: boolean;
+  };
+  tools_used: string[];
+  confidence: number;
+}
+
+/**
+ * Single message in conversation
+ */
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'bot';
+  message: string;
+  bot_confidence?: number;
+  source?: string;
+  was_helpful?: boolean;
+  created_at: string;
+}
+
+/**
+ * Full conversation with messages
+ */
+export interface Conversation {
+  id: string;
+  status: string;
+  user_sentiment: string;
+  urgency: string;
+  created_at: string;
+  messages: ChatMessage[];
+}
+
+/**
+ * Conversation list item (summary)
+ */
+export interface ConversationListItem {
+  id: string;
+  status: string;
+  message_count: number;
+  last_message_preview: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Feedback on bot response
+ */
+export interface FeedbackRequest {
+  message_id: string;
+  was_helpful: boolean;
+}
+
+
 // ========== TOKEN MANAGEMENT (IMPROVED) ==========
 const TOKEN_KEY = 'access_token';
 const TOKEN_EXPIRY_KEY = 'token_expiry';
@@ -453,7 +692,7 @@ function handleUnauthorized() {
   
   // Redirect to login if not already there
   if (typeof window !== 'undefined' && window.location.pathname !== '/signin') {
-    window.location.href = '/signin?expired=true';
+    window.location.href = '/auth/signin?expired=true';
   }
 }
 
@@ -556,9 +795,28 @@ async function apiCall<T>(
 
 // ========== AUTH API FUNCTIONS ==========
 export async function signUp(data: SignUpData): Promise<AuthResponse> {
+
+    // ✅ SECURITY: Validate email
+  if (!isValidEmail(data.email)) {
+    throw new APIError('Invalid email', 400);
+  }
+  
+  // ✅ SECURITY: Validate password strength
+  const passwordCheck = validatePassword(data.password);
+  if (!passwordCheck.valid) {
+    throw new APIError(passwordCheck.error || 'Invalid password', 400);
+  }
+  
+  // ✅ SECURITY: Sanitize email (remove any script tags)
+  const sanitizedEmail = sanitizeInput(data.email).toLowerCase();
+
   const response = await apiCall<AuthResponse>('/auth/signup', {
     method: 'POST',
-    body: JSON.stringify(data),
+        body: JSON.stringify({
+      email: sanitizedEmail, 
+      password: data.password 
+    }),
+
   });
   
   // ✅ Auto-save token
@@ -567,9 +825,21 @@ export async function signUp(data: SignUpData): Promise<AuthResponse> {
 }
 
 export async function signIn(data: SignInData): Promise<AuthResponse> {
+    // ✅ SECURITY: Validate email
+  if (!isValidEmail(data.email)) {
+    throw new APIError('Invalid email format', 400);
+  }
+  
+  // ✅ SECURITY: Sanitize email
+  const sanitizedEmail = sanitizeInput(data.email).toLowerCase();
+
   const response = await apiCall<AuthResponse>('/auth/signin', {
     method: 'POST',
-    body: JSON.stringify(data),
+        body: JSON.stringify({
+      email: sanitizedEmail,  
+      password: data.password
+    }),
+
   });
   
   saveToken(response.access_token);
@@ -617,10 +887,17 @@ export async function generateSpeech(
   text: string,
   voiceId: string
 ): Promise<GenerateResponse> {
+    // ✅ SECURITY: Sanitize text input
+  const sanitizedText = sanitizeInput(text);
+  
+  if (!sanitizedText.trim()) {
+    throw new APIError('Text cannot be empty', 400);
+  }
+
   return apiCall<GenerateResponse>('/tts/generate', {
     method: 'POST',
     body: JSON.stringify({
-      text: text,
+      text: sanitizedText,
       voice_id: voiceId
     }),
   }, true);
@@ -791,6 +1068,23 @@ export interface AdminStats {
   cloned_voices: number;
   total_generations: number;
   admin_actions_today: number;
+
+  // Bugs stats
+  total_bugs: number;
+  new_bugs: number;
+  in_progress_bugs: number;
+  resolved_bugs: number;
+
+  // Ticket stats
+  total_tickets: number;
+  open_tickets: number;
+  high_priority_tickets: number;
+
+  // Chatbot stats
+  total_conversations: number;
+  active_conversations: number;
+  esclated_conversations: number;
+  unknown_questions: number;
 }
 
 export interface AdminUser {
@@ -803,6 +1097,58 @@ export interface AdminUser {
   is_admin: boolean;
   clones_created: number;
   created_at: string;
+}
+
+
+// ========== SUPPORT TICKET INTERFACES ==========
+
+/**
+ * Support ticket (private)
+ */
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  user_email: string;  // We'll add this to response
+  subject: string;
+  description: string;
+  category: string;
+  screenshot_url?: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  admin_notes?: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+}
+
+/**
+ * Ticket message (conversation)
+ */
+export interface TicketMessage {
+  id: string;
+  ticket_id: string;
+  sender_email: string;
+  message: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+/**
+ * Ticket with messages (full conversation)
+ */
+export interface TicketWithMessages {
+  ticket: SupportTicket;
+  messages: TicketMessage[];
+}
+
+/**
+ * Ticket list response
+ */
+export interface TicketListResponse {
+  tickets: SupportTicket[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // ========== ADMIN API FUNCTIONS ==========
@@ -945,9 +1291,6 @@ export async function updateVoiceDetails(
   }
 }
 
-
-
-
 // ========== LYVO AGENT API FUNCTIONS ==========
 
 /**
@@ -1011,9 +1354,19 @@ export async function chatWithAgent(
   agentId: string,
   data: ChatRequest
 ): Promise<ChatResponse> {
+
+    const sanitizedMessage = sanitizeInput(data.message);
+  
+  if (!sanitizedMessage.trim()) {
+    throw new APIError('Message cannot be empty', 400);
+  }
+
   return apiCall<ChatResponse>(`/agent/${agentId}/chat`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      message: sanitizedMessage,
+      audio_enabled: data.audio_enabled,
+    }),
   }, true);
 }
 
@@ -1574,6 +1927,13 @@ export async function getPaymentHistory(): Promise<PaymentHistoryResponse> {
 }
 
 /**
+ * 📜 Get ALL payments (admin only)
+ */
+export async function getAllPaymentsAdmin(): Promise<PaymentHistoryResponse> {
+  return apiCall<PaymentHistoryResponse>('/payments/admin/all_payments', {}, true);
+}
+
+/**
  * 🧮 Calculate credits from amount
  * Client-side validation before sending to backend
  */
@@ -1638,4 +1998,432 @@ export function formatAmount(amount: number, currency: 'NGN' | 'USD'): string {
   }
   
   return `${currency} ${value.toFixed(2)}`;
+}
+
+
+// ========== BUG REPORT API FUNCTIONS ==========
+
+/**
+ * 🐛 Submit a new bug report
+ * Can include optional screenshot
+ */
+export async function submitBugReport(
+  data: SubmitBugRequest
+): Promise<{ status: string; message: string; bug_id: string }> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+    // ✅ SECURITY: Sanitize all text inputs
+  const sanitizedTitle = sanitizeInput(data.title);
+  const sanitizedDescription = sanitizeInput(data.description);
+  const sanitizedPageUrl = data.page_url ? sanitizeInput(data.page_url) : undefined;
+  
+  if (!sanitizedTitle.trim() || !sanitizedDescription.trim()) {
+    throw new APIError('Title and description cannot be empty', 400);
+  }
+
+  
+  // Build FormData (for screenshot upload)
+  const formData = new FormData();
+  formData.append('title', sanitizedTitle);
+  formData.append('description', sanitizedDescription);
+  
+  // Add optional fields
+  if (data.browser) formData.append('browser', data.browser);
+  if (data.os) formData.append('os', data.os);
+  if (data.device_type) formData.append('device_type', data.device_type);
+  if (data.page_url) formData.append('page_url', sanitizedPageUrl!);
+  if (data.screenshot) formData.append('screenshot', data.screenshot);
+  
+  // ✅ Use fetch directly, bypass fetchWithTimeout to avoid header pollution
+  const response = await fetch(`${API_BASE_URL}/bugs/submit`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // ❌ NO Content-Type header - let browser set it with boundary
+    },
+    body: formData,
+  });
+  
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(
+      error.detail || 'Failed to submit bug report',
+      response.status
+    );
+  }
+  
+  return response.json();
+}
+/**
+ * 📋 Get list of bug reports with filters
+ */
+export async function getBugReports(params?: {
+  status_filter?: 'new' | 'in_progress' | 'resolved';
+  priority_filter?: 'low' | 'medium' | 'high' | 'critical';
+  sort_by?: 'created_at' | 'hearts_count' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}): Promise<BugListResponse> {
+  // Build query string
+  const queryParams = new URLSearchParams();
+  if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+  if (params?.priority_filter) queryParams.append('priority_filter', params.priority_filter);
+  if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+  
+  const queryString = queryParams.toString();
+  const url = queryString ? `/bugs/list?${queryString}` : '/bugs/list';
+  
+  return apiCall<BugListResponse>(url, {}, true);
+}
+
+/**
+ * 🔍 Get single bug report with all admin comments
+ */
+export async function getBugDetails(bugId: string): Promise<BugDetailsResponse> {
+  return apiCall<BugDetailsResponse>(`/bugs/${bugId}`, {}, true);
+}
+
+/**
+ * ❤️ Toggle heart on a bug (heart if not hearted, unheart if already hearted)
+ */
+export async function toggleBugHeart(
+  bugId: string
+): Promise<{ status: string; action: string; hearts_count: number }> {
+  return apiCall(`/bugs/${bugId}/heart`, {
+    method: 'POST',
+  }, true);
+}
+
+/**
+ * 💬 Admin adds comment to bug (admin only)
+ */
+export async function addBugComment(
+  bugId: string,
+  comment: string
+): Promise<{ status: string; message: string; comment_id: string }> {
+  const formData = new FormData();
+  formData.append('comment', comment);
+  
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/bugs/${bugId}/comment`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Failed to add comment', response.status);
+  }
+  
+  return response.json();
+}
+
+/**
+ * 🔄 Admin updates bug status/priority (admin only)
+ */
+export async function updateBugStatus(
+  bugId: string,
+  newStatus: 'new' | 'in_progress' | 'resolved',
+  newPriority?: 'low' | 'medium' | 'high' | 'critical'
+): Promise<{ status: string; message: string; bug_id: string }> {
+  const formData = new FormData();
+  formData.append('new_status', newStatus);
+  if (newPriority) formData.append('new_priority', newPriority);
+  
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+  
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/bugs/${bugId}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Failed to update bug', response.status);
+  }
+  
+  return response.json();
+}
+
+/**
+ * 🗑️ Admin archives (soft deletes) bug (admin only)
+ */
+export async function archiveBug(
+  bugId: string
+): Promise<{ status: string; message: string }> {
+  return apiCall(`/bugs/${bugId}`, {
+    method: 'DELETE',
+  }, true);
+}
+
+/**
+ * 🖼️ Get bug screenshot URL
+ */
+export function getBugScreenshotUrl(screenshotPath: string): string {
+  return `${API_BASE_URL}/uploads/${screenshotPath}`;
+}
+
+// ========== CHATBOT SUPPORT API FUNCTIONS ==========
+
+/**
+ * 💬 Send message to AI support bot
+ */
+export async function sendChatMessage(
+  message: string,
+  conversationId?: string
+): Promise<ChatResponse> {
+    const sanitizedMessage = sanitizeInput(message);
+  
+  if (!sanitizedMessage.trim()) {
+    throw new APIError('Message cannot be empty', 400);
+  }
+
+  return apiCall<ChatResponse>('/chat/message', {
+    method: 'POST',
+    body: JSON.stringify({
+      message: sanitizedMessage,
+      conversation_id: conversationId
+    })
+  }, true);
+}
+
+/**
+ * 📜 Get full conversation history
+ */
+export async function getConversation(
+  conversationId: string
+): Promise<Conversation> {
+  return apiCall<Conversation>(`/chat/conversation/${conversationId}`, {}, true);
+}
+
+/**
+ * 📋 Get user's recent conversations
+ */
+export async function getMyConversations(
+  limit: number = 20
+): Promise<ConversationListItem[]> {
+  return apiCall<ConversationListItem[]>(
+    `/chat/my-conversations?limit=${limit}`,
+    {},
+    true
+  );
+}
+
+/**
+ * 👍👎 Submit feedback on bot response
+ */
+export async function submitChatFeedback(
+  messageId: string,
+  wasHelpful: boolean
+): Promise<{ status: string; message: string }> {
+  return apiCall('/chat/feedback', {
+    method: 'POST',
+    body: JSON.stringify({
+      message_id: messageId,
+      was_helpful: wasHelpful
+    })
+  }, true);
+}
+
+
+// ========== PASSWORD RESET API FUNCTIONS ==========
+
+/**
+ * 🔐 Request password reset OTP
+ */
+export async function requestPasswordReset(
+  email: string
+): Promise<{ message: string }> {
+  return apiCall<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  }, false); // ✅ No auth required
+}
+
+/**
+ * ✅ Verify OTP and get reset token
+ */
+export async function verifyResetOTP(
+  email: string,
+  otp: string
+): Promise<{ reset_token: string; message: string }> {
+  return apiCall<{ reset_token: string; message: string }>(
+    '/auth/verify-otp',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    },
+    false // ✅ No auth required
+  );
+}
+
+/**
+ * 🔑 Reset password with token
+ */
+export async function resetPassword(
+  resetToken: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  return apiCall<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      reset_token: resetToken,
+      new_password: newPassword
+    })
+  }, false); // ✅ No auth required
+}
+
+// ========== ADMIN SUPPORT TICKET API FUNCTIONS ==========
+
+/**
+ * 🔒 Admin: Get all support tickets
+ */
+export async function adminGetTickets(params?: {
+  status_filter?: string;
+  category_filter?: string;
+  priority_filter?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<TicketListResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+  if (params?.category_filter) queryParams.append('category_filter', params.category_filter);
+  if (params?.priority_filter) queryParams.append('priority_filter', params.priority_filter);
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+  
+  const queryString = queryParams.toString();
+  const url = queryString ? `/support/admin/tickets?${queryString}` : '/support/admin/tickets';
+  
+  return apiCall<TicketListResponse>(url, {}, true);
+}
+
+/**
+ * 🔒 Admin: Get single ticket with messages
+ */
+export async function adminGetTicketDetails(ticketId: string): Promise<TicketWithMessages> {
+  return apiCall<TicketWithMessages>(`/support/admin/tickets/${ticketId}`, {}, true);
+}
+
+/**
+ * 🔒 Admin: Reply to ticket
+ */
+export async function adminReplyToTicket(
+  ticketId: string,
+  message: string
+): Promise<{ status: string; message: string; message_id: string }> {
+  return apiCall(`/support/admin/tickets/${ticketId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ message })
+  }, true);
+}
+
+/**
+ * 🔒 Admin: Update ticket status
+ */
+export async function adminUpdateTicketStatus(
+  ticketId: string,
+  newStatus: string,
+  newPriority?: string,
+  adminNotes?: string
+): Promise<{ status: string; message: string; ticket_id: string }> {
+  return apiCall(`/support/admin/tickets/${ticketId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      new_status: newStatus,
+      new_priority: newPriority,
+      admin_notes: adminNotes
+    })
+  }, true);
+}
+
+// ========== NOTIFICATION API FUNCTIONS ==========
+
+/**
+ * 🔔 Get user's notifications
+ */
+export async function getNotifications(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<NotificationListResponse> {
+  return apiCall<NotificationListResponse>(
+    `/notifications?page=${page}&page_size=${pageSize}`,
+    {},
+    true
+  );
+}
+
+/**
+ * 🔔 Get unread notification count (for sidebar badge)
+ */
+export async function getUnreadNotificationCount(): Promise<UnreadCountResponse> {
+  return apiCall<UnreadCountResponse>('/notifications/unread-count', {}, true);
+}
+
+/**
+ * ✅ Mark notification as read
+ */
+export async function markNotificationRead(
+  notificationId: string
+): Promise<{ message: string }> {
+  return apiCall<{ message: string }>(
+    `/notifications/${notificationId}/mark-read`,
+    { method: 'PATCH' },
+    true
+  );
+}
+
+/**
+ * 🗑️ Delete notification (must be read first)
+ */
+export async function deleteNotification(
+  notificationId: string
+): Promise<{ message: string }> {
+  return apiCall<{ message: string }>(
+    `/notifications/${notificationId}`,
+    { method: 'DELETE' },
+    true
+  );
+}
+
+/**
+ * ✅ Mark all notifications as read
+ */
+export async function markAllNotificationsRead(): Promise<{ message: string }> {
+  return apiCall<{ message: string }>(
+    '/notifications/mark-all-read',
+    { method: 'POST' },
+    true
+  );
 }

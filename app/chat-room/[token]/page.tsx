@@ -15,7 +15,7 @@ import {
   chatWithAgentVoice,
   getToken,
   isAuthenticated,
-  getUserBalance,
+  getUserProfile,
   getAgent,
   getSessionStats,
   getSharedChatHistory,
@@ -69,16 +69,20 @@ export default function ChatRoomPage() {
   
   // Credits Display
 //  USE GLOBAL CONTEXT FOR OWNER, LOCAL STATE FOR SHARED USERS
-const { balance: globalBalance, totalCredits: globalTotal,
-   percentage: globalPercentage, deductCredits, refreshBalance } = useCreditBalance();
+const { 
+  totalCredits,
+  percentage: globalPercentage, 
+  deductCredits, 
+  refreshBalance 
+} = useCreditBalance();
 
 // Local state for shared users (to display owner's balance without modifying global context)
 const [sharedOwnerBalance, setSharedOwnerBalance] = useState<number>(0);
 const [sharedInitialBalance, setSharedInitialBalance] = useState<number>(1000);
 
 // Computed values based on access type
-const displayBalance = accessType === 'owner' ? globalBalance : sharedOwnerBalance;
-const displayTotal = accessType === 'owner' ? globalTotal : sharedInitialBalance;
+const displayBalance = accessType === 'owner' ? totalCredits : sharedOwnerBalance;
+const displayTotal = accessType === 'owner' ? totalCredits : sharedInitialBalance;
 const displayPercentage = accessType === 'owner' ? globalPercentage : 
   (sharedInitialBalance > 0 ? (sharedOwnerBalance / sharedInitialBalance) * 100 : 0); 
 
@@ -242,9 +246,9 @@ const clearSessionFromLocalStorage = () => {
     // ✅ CRITICAL: Log if URL token differs from backend agent_id (for debugging)
     if (verifiedAccessType === 'owner' && token !== verifiedAgentId) {
         console.warn('⚠️  URL token differs from backend agent_id');
-        console.warn(`   URL token: ${token.substring(0, 20)}...`);
-        console.warn(`   Backend agent_id: ${verifiedAgentId.substring(0, 20)}...`);
-        console.warn('   This is OK if owner opened a share link, but using backend agent_id for all operations');
+       // console.warn(`   URL token: ${token.substring(0, 20)}...`);
+       // console.warn(`   Backend agent_id: ${verifiedAgentId.substring(0, 20)}...`);
+        //console.warn('   This is OK if owner opened a share link, but using backend agent_id for all operations');
     }
     
     // Save session with the VERIFIED agent_id (not URL token)
@@ -338,7 +342,7 @@ const clearSessionFromLocalStorage = () => {
     }
   };
 
-  // 🆕 LOAD OWNER DATA (history + balance)
+  //  LOAD OWNER DATA (history + balance)
   const loadOwnerData = async (agentId: string) => {
     try {
       // Load conversation history
@@ -354,7 +358,7 @@ const clearSessionFromLocalStorage = () => {
       setMessages(formattedMessages);
       
       // Load balance
-      const balanceData = await getUserBalance();
+      const profileData  = await getUserProfile();
       await refreshBalance();
       
       // Calculate real initial balance
@@ -364,7 +368,7 @@ const clearSessionFromLocalStorage = () => {
       
       
       console.log('✅ Loaded owner data:', formattedMessages.length, 'messages');
-      console.log('💰 Credits:', balanceData.balance, '/', balanceData.balance + totalCreditsUsed);
+      console.log('💰 Credits:', profileData.total_credits, '/', profileData.total_credits + totalCreditsUsed);
     } catch (error) {
       console.error('Failed to load owner data:', error);
     }
@@ -373,7 +377,7 @@ const clearSessionFromLocalStorage = () => {
 
   const validateAsOwner = async (agentId: string, userToken: string) => {
     try {
-      const balanceData = await getUserBalance();
+      const profileData  = await getUserProfile();
       const agentData = await getAgent(agentId);
       
       setAccessType('owner');
@@ -777,11 +781,20 @@ const clearSessionFromLocalStorage = () => {
   }
 
   return (  
-    <div className="min-h-screen bg-[#101114] flex">
+    <div className="min-h-screen bg-[#101114] flex overflow-x-hidden">
+      {/* Mobile Overlay - only shows when sidebar open on mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div className={`
         fixed left-0 top-0 h-screen
         ${sidebarOpen ? 'w-64' : 'w-0'}
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         transition-all duration-300 ease-in-out
         bg-[#0d0d0f] backdrop-blur-sm border-r border-slate-700
         overflow-hidden z-40
@@ -859,7 +872,6 @@ const clearSessionFromLocalStorage = () => {
                     strokeDashoffset={
                       accessType === 'owner' 
                         ? circumference - (displayPercentage / 100) * circumference  
- 
                         : circumference - (rateLimitPercentage / 100) * circumference
                     }
                     strokeLinecap="round"
@@ -914,9 +926,12 @@ const clearSessionFromLocalStorage = () => {
       {/* Collapse Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className={`fixed top-6 w-8 h-8 
+        className={`
+          fixed top-6 w-8 h-8 
           flex items-center justify-center z-50
-          ${sidebarOpen ? 'left-[200px]' : 'left-4'}`}
+          ${sidebarOpen ? 'lg:left-[200px]' : 'lg:left-4'}
+          left-4
+        `}
       >
         {sidebarOpen ? 
         <Icon icon="ic:sharp-menu-open" width="24" height="24" className="text-white hover:text-[#fdc10a] hover:scale-107" /> 
@@ -925,19 +940,20 @@ const clearSessionFromLocalStorage = () => {
 
       {/* Main Chat Area */}
       <div className={`
-        flex-1 flex flex-col transition-all duration-300
-        ${sidebarOpen ? 'ml-64' : 'ml-10'}
+        flex flex-col transition-all duration-300
+        w-full lg:w-auto lg:flex-1
+        ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-10'}
       `}>
         {/* Header */}
-        <div className="bg-transparent p-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-white">{agentName}</h3>
-            <p className="text-sm text-slate-400">{agentCharacter || 'AI Assistant'}</p>
+        <div className="bg-transparent px-4 py-3 lg:p-4 flex items-center justify-between border-b border-slate-800/50 lg:border-0">
+          <div className="ml-12 lg:ml-0 flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-white truncate">{agentName}</h3>
+            <p className="text-xs lg:text-sm text-slate-400 truncate">{agentCharacter || 'AI Assistant'}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`p-3 rounded-lg transition-colors ${
+              className={`p-2 lg:p-3 rounded-lg transition-colors ${
                 voiceEnabled 
                   ? 'bg-blue-500/20 text-blue-400' 
                   : 'bg-slate-800 text-slate-400'
@@ -949,19 +965,19 @@ const clearSessionFromLocalStorage = () => {
             {accessType === 'owner' && (
                <button
                   onClick={() => router.push(`/agent/${agentId}/shared-users`)}
-                  className="p-4"
+                  className="p-2 lg:p-4"
                   title="Manage shared users"
                 >
-                  <Icon icon="lets-icons:user-scan-light" width="34" height="34" 
-                  className="text-gray-200 hover:text-[#fdc10a] hover:rotate-12 hover:scale-119" />
+                  <Icon icon="lets-icons:user-scan-light" width="24" height="24" 
+                  className="lg:w-[34px] lg:h-[34px] text-gray-200 hover:text-[#fdc10a] hover:rotate-12 hover:scale-119" />
                </button>
             )}
           </div>
         </div>
 
         {/* Messages */}
-        <div className={`flex-1 overflow-y-auto p-6 ${sidebarOpen ? 'ml-4' : 'ml-0'}`}>
-          <div className="max-w-9xl mx-auto space-y-4">
+        <div className={`flex-1 overflow-y-auto px-3 py-4 lg:p-6 ${sidebarOpen ? 'lg:ml-4' : ''}`}>
+          <div className="max-w-9xl mx-auto space-y-3 lg:space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -969,13 +985,13 @@ const clearSessionFromLocalStorage = () => {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[85%] lg:max-w-[45%] rounded-2xl px-4 py-3 ${
                     message.role === 'user'
                       ? 'bg-[#232838] text-white'
                       : 'bg-[#1f2024] text-slate-100'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
                   <p className="text-xs mt-1 opacity-70">
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -987,13 +1003,13 @@ const clearSessionFromLocalStorage = () => {
         </div>
 
         {/* Input Area */}
-        <div className="bg-[#101114] p-4">
+        <div className="bg-[#101114] px-3 py-3 lg:p-4 border-t border-slate-800/50">
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 lg:gap-3">
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isProcessing}
-                className={`p-3 rounded-full transition-all ${
+                className={`p-3 rounded-full flex-shrink-0 transition-all ${
                   isRecording
                     ? 'bg-red-600 hover:bg-red-700 animate-pulse'
                     : 'bg-[#1f2024] hover:bg-slate-800'
@@ -1014,15 +1030,15 @@ const clearSessionFromLocalStorage = () => {
                   onKeyPress={(e) => e.key === 'Enter' && sendTextMessage()}
                   placeholder="Type your message..."
                   disabled={isProcessing || isRecording}
-                  className="flex-1 bg-[#1f2024] border border-slate-700 rounded-xl px-4 py-3
-                   text-white placeholder-slate-500 focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+                  className="flex-1 min-w-0 bg-[#1f2024] border border-slate-700 rounded-xl px-4 py-3
+                   text-sm text-white placeholder-slate-500 focus:outline-none focus:border-zinc-500 disabled:opacity-50"
                 />
                 <button
                   onClick={sendTextMessage}
                   disabled={!inputMessage.trim() || isProcessing || isRecording}
-                  className="px-6 py-3 bg-zinc-700 hover:bg-zinc-500
+                  className="px-4 lg:px-6 py-3 bg-zinc-700 hover:bg-zinc-500
                    disabled:bg-[#1f2024] disabled:cursor-not-allowed
-                    text-white rounded-xl transition-colors flex items-center gap-2"
+                    text-white rounded-xl transition-colors flex items-center gap-2 flex-shrink-0"
                 >
                   {isProcessing ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

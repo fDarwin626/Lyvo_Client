@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import AudioPlayer from '@/components/AudioPlayer';
 import TopBar from '@/components/Topbar';
 
-
 export default function DashboardPage() {
   const router = useRouter();
   const [recentVoices, setRecentVoices] = useState<Voices[]>([]);

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap'; 
 import { Loader2 } from 'lucide-react';
 import { useCreditBalance } from '@/app/contexts/CreditContext';
+import { getUnreadNotificationCount, isAuthenticated } from '@/lib/api';
 
 
 interface SidebarProps {
@@ -15,6 +16,7 @@ interface SidebarProps {
 export default function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { tierName, totalCredits, percentage, isLoading, error, planTier, userName, userEmail  } = useCreditBalance();
   const router = useRouter();
 
@@ -26,6 +28,32 @@ export default function Sidebar({ onCloseMobile }: SidebarProps) {
   const toggleBtnRef = useRef(null);
   const circumference = 2 * Math.PI * 40;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+
+  // ✅ Fetch unread notification count
+
+useEffect(() => {
+  const fetchUnreadCount = async () => {
+    // ✅ Use helper function
+    if (!isAuthenticated()) {
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      const response = await getUnreadNotificationCount();
+      setUnreadCount(response.unread_count);
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+      setUnreadCount(0);
+    }
+  };
+
+  fetchUnreadCount();
+  const interval = setInterval(fetchUnreadCount, 30000);
+  return () => clearInterval(interval);
+}, []);
+
 
   useEffect(() => {
     if (isCollapsed) {
@@ -291,9 +319,9 @@ return (
           </Link>
 
           <Link 
-            href="/dashboard/creators"
+            href="/dashboard/bug-report"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
-              isActive('/dashboard/creators') 
+              isActive('/dashboard/bug-report') 
                 ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
@@ -302,18 +330,30 @@ return (
             {!isCollapsed && <span ref={addNavRef(7)}>Report Bug</span>}
           </Link>
 
-          <Link 
-            href="/dashboard/notifications"
-            className={`flex items-center mt-5 ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
-              isActive('/dashboard/notifications') 
+            <Link 
+            href="/dashboard/notifications-page"
+            className={`flex items-center mt-5 ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 relative ${
+              isActive('/dashboard/notifications-page') 
                 ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="solar:bell-broken" width="24" height="24" className="color: #828282" /></span>
+            <span className="relative">
+              <Icon 
+                icon="solar:bell-broken" 
+                width="24" 
+                height="24" 
+                className={`${unreadCount > 0 ? 'animate-bell-shake' : ''}`}
+              />
+              {/* Red badge with unread count */}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-scale-in">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </span>
             {!isCollapsed && <span ref={addNavRef(8)}>Notification</span>}
           </Link>
-
           <Link 
             href="/dashboard/history"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
@@ -325,6 +365,19 @@ return (
             <span><Icon icon="solar:history-2-broken" width="24" height="24" className=" #e8be3e" /></span>
             {!isCollapsed && <span ref={addNavRef(9)}>History</span>}
           </Link>
+
+            <Link 
+            href="/dashboard/payment-history"
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
+              isActive('/dashboard/payment-history') 
+                ? 'bg-gray-100 text-secondary' 
+                : 'text-secondary hover:bg-gray-100'
+            }`}
+          >
+            <span><Icon icon="streamline-freehand:credit-card-payment" width="24" height="24" className=" #e8be3e" /></span>
+            {!isCollapsed && <span ref={addNavRef(9)}>Payment History</span>}
+          </Link>
+
 
           {/* Upgrade Button */}
           <div className="mt-7 px-1">
@@ -424,14 +477,14 @@ return (
         {/* USER PROFILE at bottom */}
 <div ref={profileTextRef} className="p-4 border-t border-default">
   <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-    {/* **REPLACE THIS** - Dynamic avatar with first letter of email */}
+    {/*Dynamic avatar with first letter of email */}
     <div className="w-10 h-10 rounded-full bg-brand flex items-center 
     justify-center text-white font-semibold uppercase">
       {userEmail ? userEmail[0] : 'U'}
     </div>
     {!isCollapsed && (
       <div className="flex-1">
-        {/* **REPLACE THIS** - Show actual username */}
+        {/***Show actual username */}
         <p className="text-sm font-medium capitalize">{userName}</p>
         <p className="text-xs text-secondary">My Workspace</p>
       </div>

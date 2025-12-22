@@ -167,15 +167,14 @@ export default function AgentCreationPage() {
       <div className="max-w-9xl mx-auto ">
         {/* Hero Section with Spline Robot Placeholder */}
         <div className="text-center mb-16">
-          <div className="w-full h-80 flex border rounded-4xl items-center justify-center mb-20
+        <div className="w-full h-50 md:h-80  flex border rounded-4xl items-center justify-center mb-20
           overflow-hidden relative">
             {/* Spline Robot would go here */}
-            <div className=" absolute  w-full h-full bottom-50">
-                <img src="\images\2ladies.jpg" alt='Ai image' className='w-screen h-screen'/>
+            <div className="absolute w-full h-full">
+                <img src="\images\2ladies.jpg" alt='Ai image' className='w-full h-full object-cover'/>
             </div>
             <div className="absolute inset-0 pointer-events-none" />
-          </div>
-          
+          </div>          
           <h2 className="text-4xl md:text-7xl mt-10 font-amiamie font-bold text-primary mb-8">
             Build Your <span className='font-serif italic inline-block bg-clip-text text-transparent
              bg-gradient-to-b from-[#191654]  hover:to-purple-

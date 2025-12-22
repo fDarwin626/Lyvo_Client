@@ -339,7 +339,8 @@ return (
 
         {/* ========== SECTION 3A: CHAT DIV (Conditional) ========== */}
         {selectedAgent ? (
-          <div className="mb-8 border border-gray-400 bg-gradient-to-br from-gray-900 via-slate-800 to-cyan-900 rounded-3xl p-5 h-[670px] flex flex-col overflow-hidden">
+          <div className="mb-8 border border-gray-400 bg-gradient-to-br
+           from-gray-900 via-slate-800 to-cyan-900 rounded-3xl p-5 h-[670px] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="backdrop-blur-sm mb-4">
               <div className="flex items-center justify-between">
@@ -433,7 +434,7 @@ return (
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                      className={`lg:max-w-[75%] max-w-[50%] rounded-2xl px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-slate-600 text-white'
                           : 'bg-slate-800 text-slate-100'
@@ -477,12 +478,15 @@ return (
                     onKeyPress={(e) => e.key === 'Enter' && sendTextMessage()}
                     placeholder="Type your message..."
                     disabled={isProcessing || isRecording}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50"
+                    className="flex-1 bg-slate-950 border border-slate-800
+                     rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none
+                      focus:border-blue-500 transition-colors disabled:opacity-50"
                   />
                   <button
                     onClick={sendTextMessage}
                     disabled={!inputMessage.trim() || isProcessing || isRecording}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex items-center gap-2"
+                    className="lg:px-6 lg:py-3 py-2 px-1 lg:bg-blue-600 hover:bg-blue-700 lg:disabled:bg-slate-800
+                     disabled:cursor-not-allowed text-white rounded-xl transition-colors flex items-center gap"
                   >
                     {isProcessing ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -519,10 +523,11 @@ return (
         {/* ========== SECTION 3B: AGENTS DASHBOARD ========== */}
         <div className="bg-white rounded-2xl border border-gray-300 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-amiamie text-primary">Your Agents</h2>
+            <h2 className="lg:text-2xl  text-xl font-amiamie text-primary">Your Agents</h2>
             <button
               onClick={() => window.location.href = 'create_agent'}
-              className="px-4 py-2 bg-gradient-to-r from-[#43C6AC] to-[#191654] hover:from-[#191654] hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all"
+              className="lg:px-4 lg:py-2 px-2 py-1 bg-gradient-to-r from-[#43C6AC] to-[#191654]
+               hover:from-[#191654] hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all"
             >
               + Create New Agent
             </button>
