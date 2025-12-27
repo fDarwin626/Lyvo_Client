@@ -20,7 +20,8 @@ const Footer = () => {
       opacity={0.8}
     />
         <div className="absolute inset-0 flex items-center justify-center p-4">
-          <div className="backdrop-blur-md  bg-white/10 border border-white/20 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+          <div className="backdrop-blur-md  bg-white/10 border border-white/20 
+          rounded-3xl p-8 max-w-md w-full shadow-2xl">
             {/* Pause button */}
             <div className="flex justify-center mb-25">
               <button className="bg-white rounded-2xl p-4 shadow-lg hover:scale-105 transition-transform">
@@ -31,13 +32,14 @@ const Footer = () => {
             </div>
             
             {/* Heading */}
-            <h2 className="text-4xl font-bold text-center text-black mb-10">
+            <h2 className="text-4xl  font-amiamie font-bold text-center text-black mb-10">
               Created with You in mind
             </h2>
 
             <button 
               onClick={() => router.push('/auth/signup')}
-            className="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-gray-800 transition-colors mb-4">
+            className="w-full bg-black text-gray-200 font-bold
+            font-amiamie py-4 rounded-full hover:bg-gray-800 transition-colors mb-4">
             GET STARTED FREE
             </button>
              <p className="text-center text-gray/70 text-sm">

@@ -47,8 +47,8 @@ useEffect(() => {
   return (
   <section className="min-h-screen py-20">
     <div className="text-center mb-10">
-      <h1 className="text-5xl font-semibold">What you'll get</h1>
-      <p className="text-xl mt-5">Professional Voice models for your workflow</p>
+      <h1 className="lg:text-5xl text-4xl font-amiamie font-semibold">What you'll get</h1>
+      <p className="lg:text-xl mt-5 text-sm font-serif">Professional Voice models for your workflow</p>
     </div>
 
 <div className="relative">
@@ -69,8 +69,8 @@ useEffect(() => {
       >
         {/* TOP HALF - COLOR */}
         <div className={`h-1/2 ${service.color} flex flex-col items-start justify-center p-8`}>
-          <h3 className="text-white text-2xl font-bold mb-3">{service.title}</h3>
-          <p className="text-white text-sm">{service.description}</p>
+          <h3 className="text-white font-amiamie-round text-2xl font-bold mb-3">{service.title}</h3>
+          <p className="text-white text-sm font-serif">{service.description}</p>
         </div>  
         {/* BOTTOM HALF - IMAGE */}
         <div className="h-1/2">
@@ -92,7 +92,7 @@ useEffect(() => {
       key={index}
       onClick={() => setActiveIndex(index)}
       className={`w-3 h-3 rounded-full transition-all
-         ${activeIndex === index ? 'bg-blue-600 w-8' : 'bg-gray-300'}`}
+         ${activeIndex === index ? 'bg-slate-900 w-8' : 'bg-gray-300'}`}
     />
   ))}
 </div>

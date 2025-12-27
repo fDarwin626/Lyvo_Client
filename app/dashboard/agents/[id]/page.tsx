@@ -75,7 +75,7 @@ export default function AgentChatPage() {
   const pollForAudio = async (statusUrl: string, maxAttempts = 300) => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
     
-    console.log('🔄 Starting audio polling for:', statusUrl);
+    console.log(' Starting audio polling for:', statusUrl);
     
     for (let i = 0; i < maxAttempts; i++) {
       try {

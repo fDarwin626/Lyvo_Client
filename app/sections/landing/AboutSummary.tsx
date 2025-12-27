@@ -16,17 +16,17 @@ const AboutSummary = () => {
     <section className="min-h-screen mt-20 flex-col items-center text-center justify-between">
        <Marquee
         items={item}
-        className="text-black bg-transparent text-3xl"
+        className="text-black bg-transparent !text-xl  font-amiamie-round"
         icon="simple-icons:creativetechnology"
         IconclassName="w-24 h-23 text-gold"
        />
 
       <div className="flex flex-col items-center justify-center mt-20">
-          <h1 className="text-5xl font-[Amiamie-Round]  font-light"
+          <h1 className="lg:text-5xl text-3xl font-amiamie font-medium"
           >The World Most Innovative Mordern Ai Voice Platform</h1>
-           <p className=" flex text-center justify-center text-2xl mt-5"
-           >AI voice models and products powering millions of developers, creators, 
-           and enterprises. <br></br>From low‑latency conversational agents to the leading AI
+           <p className=" flex text-center justify-center lg:text-2xl mt-5 text-sm font-normal"
+           >AI voice models and products powering  creators, 
+           and enterprises. <br></br>From  conversational agents to the leading AI
              voice generator for voiceovers and audiobooks.</p>
           
       </div>
@@ -50,7 +50,7 @@ const AboutSummary = () => {
 
   {/* Content Overlay */}
   <div className="relative z-10 flex flex-col items-center justify-center h-full px-4">
-    <h1 className="text-5xl md:text-6xl font-medium text-gray-950 text-center mb-8">
+    <h1 className="text-2xl md:text-6xl lg:font-light font-semibold text-gray-950 text-center mb-8 font-amiamie">
       Experience our full audio platform,<br />
       Get Started today
     </h1>

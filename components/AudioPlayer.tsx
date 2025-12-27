@@ -2,7 +2,7 @@
 
 import { Icon } from '@iconify/react';
 import { useState, useRef, useEffect } from 'react';
-
+import { getAudioUrl } from '@/lib/api';
 interface AudioPlayerProps {
   audioUrl: string;
   voiceName: string;
@@ -60,8 +60,7 @@ export default function AudioPlayer({ audioUrl, voiceName, onClose }: AudioPlaye
     bg-transparent px-4 sm:px-6 py-3 sm:py-3
     flex items-center justify-center sm:justify-start gap-2 sm:gap-4 z-50 animate-fade-in
     w-[95%] sm:w-auto max-w-md sm:max-w-none">
-      <audio ref={audioRef} src={`http://127.0.0.1:8000${audioUrl}`} />
-      
+      <audio ref={audioRef} src={getAudioUrl(audioUrl)} />
       {/* Voice Name */}
       <span className="text-xl sm:text-xl font-amiamie font-medium text-gray-900 truncate sm:flex-initial">
         {voiceName}

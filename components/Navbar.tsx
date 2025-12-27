@@ -9,25 +9,28 @@ export default function Navbar() {
         
         {/* Logo with Cal Sans */}
         <div 
-          className="text-3xl font-semibold tracking-tight" 
+          className="lg:text-3xl font-2xl font-semibold tracking-tight" 
           style={{ fontFamily: 'Cal Sans, sans-serif' }}
         >
           Lyvo
         </div>
         
         {/* Right side - 3 buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center lg:gap-3  gap-4 ">
           <button 
           onClick={() => router.push('/auth/signin')}
-          className="px-5 py-2 text-primary hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium">
+          className="lg:px-5 px-2 py-2 text-primary hover:bg-gray-50 rounded-lg 
+          transition-colors text-sm font-medium font-amiamie">
             Log in
           </button>
           <button 
           onClick={() => router.push('/auth/signup')}
-          className="px-5 py-2 text-primary hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium border border-default">
+          className="px-5 py-2 text-primary hover:bg-gray-50 rounded-lg
+          font-amiamie transition-colors text-sm font-medium border border-default">
             Sign in 
           </button>
-          <button className="px-5 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium">
+          <button className="lg:px-5 px-2 py-2 bg-black text-white rounded-lg
+           hover:bg-gray-800 transition-colors text-sm lg:font-medium font-normal tracking-tighter">
             Get started for free
           </button>
         </div>

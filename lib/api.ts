@@ -63,6 +63,11 @@ function validatePassword(password: string): { valid: boolean; error: string | n
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const REQUEST_TIMEOUT = 500000; 
 
+export function getAudioUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
+
 export interface SignUpData {
   email: string;
   password: string;

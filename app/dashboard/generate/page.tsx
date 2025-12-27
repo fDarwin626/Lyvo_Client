@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { getVoices, Voices, getToken, generateSpeech, waitForGeneration } from '@/lib/api';
+import { getVoices, Voices, getToken, generateSpeech, waitForGeneration, getAudioUrl } from '@/lib/api';
 import Link from 'next/link';
 import { useCreditBalance } from '@/app/contexts/CreditContext';
 
@@ -79,7 +79,8 @@ const handleGenerate = async () => {
     
     // Step 3: Set the audio URL
     if (finalStatus.audio_url) {
-      setGeneratedAudio(`http://127.0.0.1:8000${finalStatus.audio_url}`);
+        setGeneratedAudio(getAudioUrl(finalStatus.audio_url)); 
+
     } else {
       throw new Error('Audio generation failed');
     }
