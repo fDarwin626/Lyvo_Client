@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { requestPasswordReset } from '@/lib/api';
+import { Icon } from '@iconify/react';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -70,7 +71,8 @@ export default function ForgotPasswordPage() {
               Check your email!
             </h3>
             <p className="text-green-700 text-sm">
-              We've sent a 6-digit code to <strong>{email}</strong>
+              We've sent a 6-digit code to <strong>{email}</strong><br></br> 
+              <span className='text-primary'>check your primary inbox or spam folder.</span>
             </p>
             <p className="text-green-600 text-xs mt-2">
               Redirecting to verification...
@@ -140,7 +142,8 @@ export default function ForgotPasswordPage() {
         {/* Security Note */}
         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800 text-center">
-            🔒 <strong>Security tip:</strong> The verification code expires in 2 minutes. 
+            <Icon icon="solar:lock-broken" width="24" height="24"  className="text-yellow-500" />
+             <strong>Security tip:</strong> The verification code expires in 2 minutes. 
             Never share it with anyone.
           </p>
         </div>

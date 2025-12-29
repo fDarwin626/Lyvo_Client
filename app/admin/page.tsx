@@ -352,18 +352,6 @@ const loadStats = async () => {
         {/* Bottom Stats Grid */}
         <div className="grid grid-cols-6 gap-6 mt-6">
           <BottomStatCard
-            icon={<Icon icon="carbon:checkmark-outline" width="32" className="text-green-400" />}
-            label="Active Users"
-            value={(stats?.active_users || 0).toLocaleString()}
-            bgColor="bg-green-500/10"
-          />
-          <BottomStatCard
-            icon={<Icon icon="hugeicons:ai-voice" width="32" className="text-yellow-400" />}
-            label="Total Voices"
-            value={(stats?.total_voices || 0).toLocaleString()}
-            bgColor="bg-yellow-500/10"
-          />
-          <BottomStatCard
             icon={<Icon icon="mynaui:music-waves" width="32" className="text-cyan-400" />}
             label="Generations"
             value={(stats?.total_generations || 0).toLocaleString()}
@@ -401,19 +389,6 @@ const loadStats = async () => {
         value={(stats?.high_priority_tickets || 0).toLocaleString()}
         bgColor="bg-red-600/10"
       />
-      <BottomStatCard
-        icon={<Icon icon="mdi:robot" width="32" className="text-blue-400" />}
-        label="Bot Chats"
-        value={(stats?.total_conversations || 0).toLocaleString()}
-        bgColor="bg-blue-500/10"
-      />
-      <BottomStatCard
-        icon={<Icon icon="mdi:help-circle" width="32" className="text-purple-400" />}
-        label="Unknown Q's"
-        value={(stats?.unknown_questions || 0).toLocaleString()}
-        bgColor="bg-purple-600/10"
-      />
-
         </div>
 
 

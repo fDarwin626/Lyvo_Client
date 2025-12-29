@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import { Suspense, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import { cloneVoice, getMyClones, deleteClone, type ClonedVoice } from "@/lib/api"
+import { cloneVoice, getMyClones, deleteClone, type ClonedVoice, getAudioUrl } from "@/lib/api"
 import { Mic, Upload, Trash2, Play, Pause, Square, StopCircle } from "lucide-react"
 import { Icon } from "@iconify/react";
 import { useCreditBalance } from '@/app/contexts/CreditContext';
@@ -297,7 +297,7 @@ function VoiceCloningPage () {
 
             
      // Handle clone submission
-async function handleClone() {
+    async function handleClone() {
     if (!voiceName.trim()) {
         setError("Voice name is required")
         return
@@ -308,20 +308,39 @@ async function handleClone() {
         return
     }
 
+    
+    if (!audioFile) {
+        console.error("❌ audioFile is null!");
+        setError("Audio file missing - please try recording again");
+        return;
+    }
+
+
     try {
         setCloning(true)
         setError("")
         setSuccess("")
         
+        console.log("🎙️ Starting clone request...");
+        console.log("  - Voice name:", voiceName);
+        console.log("  - Description:", description);
+        console.log("  - Audio file:", audioFile.name, audioFile.type, audioFile.size);
+        
         const result = await cloneVoice(audioFile, voiceName, description)
         
-        // ✅ NOW DEDUCT CREDITS IN FRONTEND
-        if (result.credits_used) {
-            deductCredits(result.credits_used);  // Optimistic update
-            console.log(`🎙️ Voice cloned. Credits used: ${result.credits_used}`);
+        console.log("✅ Clone SUCCESS! Full result:", result);
+        console.log("  - ID:", result.id);
+        console.log("  - Name:", result.name);
+        console.log("  - Preview URL:", result.preview_url);
+        console.log("  - Credit used:", result.credit_used);
+        console.log("  - Clones remaining:", result.clones_remaining);
+        
+        if (result.credit_used) {
+            deductCredits(result.credit_used);
+            console.log(`🎙️ Voice cloned. Credits used: ${result.credit_used}`);
         }
         
-        setSuccess(`Voice "${voiceName}" cloned successfully! ${result.clones_remaining} clones remaining.`)
+        setSuccess(`Voice "${voiceName}" cloned successfully! ${result.clones_remaining || 0} clones remaining.`)
         
         // Reset form
         setVoiceName("")
@@ -334,12 +353,33 @@ async function handleClone() {
         fetchClones()
         
     } catch (err: any) {
-        setError(err.message)
+        // ✅ DETAILED ERROR LOGGING
+        console.error("❌ Clone error - FULL ERROR OBJECT:", err);
+        console.error("  - Error type:", typeof err);
+        console.error("  - Error name:", err.name);
+        console.error("  - Error message:", err.message);
+        console.error("  - Error statusCode:", err.statusCode);
+        console.error("  - Error details:", err.details);
+        console.error("  - Error stack:", err.stack);
+        
+        // ✅ Better error display
+        let errorMessage = "Failed to clone voice";
+        
+        if (err.message && typeof err.message === 'string') {
+            errorMessage = err.message;
+        } else if (err.detail && typeof err.detail === 'string') {
+            errorMessage = err.detail;
+        } else if (err.details) {
+            errorMessage = JSON.stringify(err.details, null, 2);
+        } else if (typeof err === 'string') {
+            errorMessage = err;
+        }
+        
+        setError(errorMessage);
     } finally {
         setCloning(false)
     }
-}       
-
+}
     // Handle delete clone
     async function handleDelete(id: string, name: string) {
         if (!confirm(`Delete "${name}"? This cannot be undone.`)) return
@@ -363,8 +403,7 @@ async function handleClone() {
             if (audioElement) {
                 audioElement.pause()
             }
-            
-            const audio = new Audio(`http://127.0.0.1:8000${previewUrl}`)
+            const audio = new Audio(getAudioUrl(previewUrl))
             audio.play()
             audio.onended = () => {
                 setPlayingId(null)

@@ -29,9 +29,11 @@ export default function Navbar() {
           font-amiamie transition-colors text-sm font-medium border border-default">
             Sign in 
           </button>
-          <button className="lg:px-5 px-2 py-2 bg-black text-white rounded-lg
+          <button 
+          onClick={() => router.push('/sections/contact')}
+          className="lg:px-5 px-2 py-2 bg-black text-white rounded-lg
            hover:bg-gray-800 transition-colors text-sm lg:font-medium font-normal tracking-tighter">
-            Get started for free
+            Contact Us
           </button>
         </div>
       </div>

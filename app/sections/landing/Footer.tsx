@@ -38,6 +38,7 @@ const Footer = () => {
 
             <button 
               onClick={() => router.push('/auth/signup')}
+
             className="w-full bg-black text-gray-200 font-bold
             font-amiamie py-4 rounded-full hover:bg-gray-800 transition-colors mb-4">
             GET STARTED FREE

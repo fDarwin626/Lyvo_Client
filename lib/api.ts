@@ -138,7 +138,7 @@ export interface ClonedVoice {
   status: string;
   clones_remaining?: number;
   created_at?: string;
-  credits_used?: number;
+  credit_used?: number;
 }
 
 
@@ -2383,7 +2383,7 @@ export async function getNotifications(
   pageSize: number = 50
 ): Promise<NotificationListResponse> {
   return apiCall<NotificationListResponse>(
-    `/notifications?page=${page}&page_size=${pageSize}`,
+    `/notifications/?page=${page}&page_size=${pageSize}`,
     {},
     true
   );

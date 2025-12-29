@@ -62,7 +62,7 @@ useEffect(() => {
 
     // Navigate to link if exists
     if (notification.link) {
-      router.push(notification.link);
+      router.push("/dashboard/history");
     }
   };
 
@@ -120,7 +120,7 @@ useEffect(() => {
   // Get notification color based on type
   const getNotificationColor = (type: string) => {
     if (type.includes('failed')) return 'text-red-500';
-    if (type.includes('success')) return 'text-green-500';
+    if (type.includes('success')) return 'text-natural-500';
     return 'text-blue-500';
   };
 
@@ -196,7 +196,7 @@ useEffect(() => {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`bg-surface border rounded-lg p-4 transition-all hover:shadow-md cursor-pointer ${
+                className={`bg-surface border rounded-lg p-4 transition-all cursor-pointer ${
                   notification.is_read
                     ? 'border-default'
                     : 'border-blue-300 bg-blue-50'
