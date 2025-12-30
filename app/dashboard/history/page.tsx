@@ -81,11 +81,13 @@ function HistoryPage() {
         }
     }
 
-    // ========== AUDIO PLAYER FUNCTIONS ==========
-    const handlePlay = (audioUrl: string, name: string) => {
-        setPlayingAudio({ url: audioUrl, name });
-        setShowPlayer(true);
-    };
+// ========== AUDIO PLAYER FUNCTIONS ==========
+const handlePlay = (audioUrl: string, name: string) => {
+    // ✅ Convert relative URL to full URL before playing
+    const fullUrl = getAudioUrl(audioUrl);
+    setPlayingAudio({ url: fullUrl, name });
+    setShowPlayer(true);
+};
 
     const handleClosePlayer = () => {
         setShowPlayer(false);
