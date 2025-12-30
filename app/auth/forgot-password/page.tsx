@@ -1,11 +1,11 @@
 "use client";
-import { useState } from 'react';
+import { useState,Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { requestPasswordReset } from '@/lib/api';
 import { Icon } from '@iconify/react';
 
-export default function ForgotPasswordPage() {
+ function ForgotPassword() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -150,5 +150,20 @@ export default function ForgotPasswordPage() {
 
       </div>
     </div>
+  );
+}
+// Main page component with Suspense wrapper
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-secondary">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ForgotPassword />
+    </Suspense>
   );
 }
