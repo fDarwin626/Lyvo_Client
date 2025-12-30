@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { transcribeAudio, downloadTranscription, getUserBalance, APIError } from '@/lib/api';
+import { transcribeAudio, downloadTranscription, APIError } from '@/lib/api';
 import { Icon } from '@iconify/react';
 import { useCreditBalance } from '@/app/contexts/CreditContext';
 
