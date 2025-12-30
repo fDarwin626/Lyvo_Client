@@ -64,7 +64,9 @@ useEffect(() => {
     {servicesData.map((service, index) => (
       <div 
         key={index}
-        className={`min-w-[400px] h-[500px] rounded-3xl overflow-hidden transition-all duration-500 snap-center ${activeIndex === index ? 'blur-0 scale-100' : 'blur-sm scale-95 opacity-70'}`}
+        className={`lg:min-w-[400px] min-w-[350px] h-[500px] rounded-3xl overflow-hidden
+           transition-all duration-500 snap-center ${activeIndex === index ? 
+            'blur-0 scale-100' : 'blur-sm scale-95 opacity-70'}`}
         onMouseEnter={() => setActiveIndex(index)}
       >
         {/* TOP HALF - COLOR */}

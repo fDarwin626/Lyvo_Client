@@ -5,7 +5,8 @@ import { Suspense, useEffect, useState } from "react";
 import { getUserTTSHistory, getUserAudiobooks, getMyClones, 
     TTSHistory, AudiobookJob, ClonedVoice, deleteClone, 
     deleteAudiobook, deleteGeneration, getTranscriptionHistory,
-    deleteTranscription, downloadTranscription } from "@/lib/api";
+    deleteTranscription, downloadTranscription, 
+    getAudioUrl} from "@/lib/api";
 import { Icon } from "@iconify/react";
 import AudioPlayer from "@/components/AudioPlayer";
 
@@ -188,7 +189,7 @@ const handleDeleteTranscription = async (id: string) => {
 
     const handleDownload = (audioUrl: string, filename: string) => {
         const link = document.createElement('a');
-        link.href = `http://127.0.0.1:8000${audioUrl}`;
+        link.href = getAudioUrl(audioUrl); 
         link.download = filename;
         document.body.appendChild(link);
         link.click();
