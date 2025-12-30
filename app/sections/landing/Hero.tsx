@@ -44,7 +44,7 @@ const Hero = () => {
   }, [currentIndex, direction, sliders.length]);
 
   return (
-    <section className="min-h-screen flex flex-col mt-20 overflow-hidden px-4">
+    <section className="min-h-screen flex flex-col mt-4 overflow-hidden px-4">
         <div className="relative w-full h-[500px] flex items-center justify-center overflow-visible">    
           {sliders.map((slide, index) => {
             const offset = index - currentIndex

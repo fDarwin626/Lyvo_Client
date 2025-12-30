@@ -63,7 +63,10 @@ const AboutSummary = () => {
         Get Started
       </button>
       
-      <button className="px-8 py-3 bg-transparent border-2 border-black text-black rounded-full font-semibold hover:bg-black hover:text-white transition">
+      <button
+       onClick={() => router.push("/documentation")}
+       className="px-8 py-3 bg-transparent border-2 border-black
+        text-black rounded-full font-semibold hover:bg-black hover:text-white transition">
         Learn More
       </button>
     </div>

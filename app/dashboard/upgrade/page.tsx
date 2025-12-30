@@ -12,6 +12,14 @@ import {
   APIError,
   UserProfile
 } from '@/lib/api';
+import { 
+  canPurchaseTestCredits,
+  recordTestPurchase,
+  formatNextEligibleDate,
+  getTestLimits
+
+ } from '@/lib/testPaymentLimiter';
+
 
 interface Feature {
   text: string;
@@ -41,20 +49,26 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
+  const [currency, setCurrency] = useState<'NGN' | 'USD'>('USD'); 
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
   const [amountError, setAmountError] = useState<string>('');
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [testLimits, setTestLimits] = useState(getTestLimits());
+  const [showRateLimitWarning, setShowRateLimitWarning] = useState(false);
 
   // Fetch user profile on mount
   useEffect(() => {
     loadUserProfile();
   }, []);
 
+
   async function loadUserProfile() {
     try {
       const profile = await getUserProfile();
       setUserProfile(profile);
+      // ✅ TEST MODE: Load rate limits after profile loads
+      setTestLimits(getTestLimits());
+      // REASON: Refresh limits when profile changes
     } catch (error) {
       console.error('Failed to load profile:', error);
       router.push('/signin');
@@ -90,10 +104,30 @@ export default function PricingPage() {
     }
   }, [customAmount, currency]);
 
-  // Handle payment initialization
+// Handle payment initialization
   async function handlePayment() {
     if (!customAmount || amountError || calculatedCredits === 0) {
       return;
+    }
+
+      console.log('💳 Payment Debug:');
+  console.log('   Currency:', currency);
+  console.log('   Custom Amount:', customAmount);
+  console.log('   Amount in cents:', Math.round(parseFloat(customAmount) * 100));
+
+
+    // ✅ TEST MODE: Check rate limit eligibility
+    const eligibility = canPurchaseTestCredits(userProfile?.total_credits || 0);
+    
+    if (!eligibility.allowed) {
+      // Show rate limit warning
+      setShowRateLimitWarning(true);
+      alert(
+        `${eligibility.reason}\n\n` +
+        `Next purchase available: ${eligibility.nextDate ? formatNextEligibleDate(eligibility.nextDate) : 'N/A'}\n` +
+        `Days remaining: ${eligibility.daysRemaining || 0}`
+      );
+      return; // BLOCK payment
     }
 
     setPaymentLoading(true);
@@ -304,14 +338,20 @@ export default function PricingPage() {
               </p>
             </div>
 
-            {/* Currency Selection */}
+              {/* Currency Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Currency
               </label>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setCurrency('NGN')}
+                  type='button'
+                  onClick={() => {
+                    console.log('🇳🇬 Setting NGN'); // Debug
+
+                    setCurrency('NGN');
+                    setCustomAmount('1537.30');
+                  }}
                   className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
                     currency === 'NGN'
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -321,7 +361,14 @@ export default function PricingPage() {
                   🇳🇬 NGN (Naira)
                 </button>
                 <button
-                  onClick={() => setCurrency('USD')}
+                  type='button'
+
+                  onClick={() => {
+                  console.log('🇳🇬 Setting NGN'); // Debug
+
+                    setCurrency('USD');
+                    setCustomAmount('1.03');
+                  }}
                   className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
                     currency === 'USD'
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -394,6 +441,22 @@ export default function PricingPage() {
               )}
             </button>
 
+            {/* ✅ TEST MODE: Rate Limit Warning */}
+            {testLimits.lastPurchaseDate && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800 font-medium">
+                  🧪 Test Mode Active
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Next purchase available: {formatNextEligibleDate(testLimits.nextEligibleDate || '')}
+                </p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  Total test purchases: {testLimits.purchaseCount}
+                </p>
+              </div>
+            )}
+            {/* REASON: Show user when they can buy again (transparency) */}
+
             {/* Security Note */}
             <p className="text-xs text-gray-500 text-center mt-4">
               🔒 Secure payment powered by Flutterwave
@@ -401,6 +464,197 @@ export default function PricingPage() {
           </div>
         </div>
       )}
+
+      {/* Test Cards Section */}
+      <div className="max-w-4xl mx-auto mt-16">
+        <div className="">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full mb-3">
+              🧪 TEST MODE ACTIVE
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Test Cards for Lyvo Credits
+            </h3>
+            <p className="text-gray-700 text-sm sm:text-base">
+              Use these test cards to purchase Lyvo credits in test mode
+            </p>
+          </div>
+
+          {/* Important Notice */}
+          <div className="bg-white rounded-lg p-4 mb-6 border-l-4 border-yellow-500">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-1">
+                  Test Mode Limitations
+                </p>
+                <ul className="text-xs text-gray-700 space-y-1">
+                  <li>• You can only purchase <strong>once per month</strong></li>
+                  <li>• Maximum <strong>1,000 credits</strong> per purchase</li>
+                  <li>• No real payment will be charged</li>
+                  <li>• This is for testing purposes only</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Cards Grid */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Visa Card */}
+            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-gray-900">Visa Card</h4>
+                <CreditCard className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
+                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <code className="text-xs font-mono">4187427415564246</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText('4187427415564246');
+                        alert('Card number copied!');
+                      }}
+                      className="text-purple-600 hover:text-purple-700 text-xs"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">CVV</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">828</code>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">PIN</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">3310</code>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <code className="text-xs font-mono">09/32</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mastercard */}
+            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-gray-900">Mastercard</h4>
+                <CreditCard className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
+                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <code className="text-xs font-mono">5531886652142950</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText('5531886652142950');
+                        alert('Card number copied!');
+                      }}
+                      className="text-purple-600 hover:text-purple-700 text-xs"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">CVV</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">564</code>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">PIN</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">3310</code>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <code className="text-xs font-mono">09/32</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* International USD Card */}
+            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-gray-900">International USD</h4>
+                <CreditCard className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
+                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <code className="text-xs font-mono">4242424242424242</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText('4242424242424242');
+                        alert('Card number copied!');
+                      }}
+                      className="text-purple-600 hover:text-purple-700 text-xs"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">CVV</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">123</code>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">OTP</p>
+                    <div className="bg-gray-50 p-2 rounded text-center">
+                      <code className="text-xs font-mono">123456</code>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <code className="text-xs font-mono">12/34</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="mt-6 bg-white rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-2 text-sm">How to Use:</h4>
+            <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
+              <li>Click "Buy Credits" button above</li>
+              <li>Enter the amount you want to test (max 1,000 credits worth)</li>
+              <li>Copy and paste any test card details at checkout</li>
+              <li>Complete the test payment flow</li>
+              <li>Your credits will be added instantly</li>
+              <li>OTP for all test payment simply enter 123456</li>
+
+            </ol>
+            <p className="text-xs text-gray-600 mt-3 italic">
+              💡 Remember: You can only make one test purchase per month.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* FAQ Section */}
       <div className="max-w-4xl mx-auto mt-16 text-center">
@@ -415,7 +669,9 @@ export default function PricingPage() {
             <button className="px-6 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
               Contact Support
             </button>
-            <button className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+            <button 
+            onClick={() => router.push("/documentation")}
+            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
               View Documentation
             </button>
           </div>

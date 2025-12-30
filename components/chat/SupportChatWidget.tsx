@@ -10,7 +10,7 @@ import {
 } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
-// ✅ Add interface for props
+//  Add interface for props
 interface SupportChatWidgetProps {
   isOpen?: boolean;           // External control
   onToggle?: () => void;      // External toggle function
@@ -197,7 +197,8 @@ export default function SupportChatWidget({
       
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
+        <div className="fixed bottom-6 lg:right-6  right-3 lg:w-96 w-86 h-[600px] bg-white rounded-lg 
+        shadow-2xl flex flex-col z-50 border border-gray-200">
           {/* Header */}
           <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center gap-3">

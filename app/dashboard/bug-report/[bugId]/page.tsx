@@ -131,6 +131,11 @@ export default function BugDetailsPage() {
     }
   };
   
+    const getReporterName = (email:string) => {
+    if (!email) return "Unknown 🤔";
+    return email.split('@')[0];
+  }
+
   // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -244,7 +249,7 @@ export default function BugDetailsPage() {
               </h1>
               
               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                <span>Reported by {isLoading ? 'Loading...' : userName}</span>
+               <span>Reported by {getReporterName(bug.user_email)}</span>
                 <span>•</span>
                 <span>{formatDate(bug.created_at)}</span>
                 {bug.updated_at !== bug.created_at && (

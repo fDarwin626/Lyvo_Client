@@ -10,7 +10,6 @@ import {
   isAuthenticated 
 } from '@/lib/api';
 import { Icon } from '@iconify/react';
-import { useCreditBalance } from '@/app/contexts/CreditContext';
 
 /**
  * 🐛 Bug Reports Page
@@ -24,7 +23,6 @@ export default function BugReportsPage() {
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-    const { userName, isLoading} = useCreditBalance();
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -148,6 +146,11 @@ export default function BugReportsPage() {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
+
+  const getReporterName = (email:string) => {
+    if (!email) return "Unknown 🤔";
+    return email.split('@')[0];
+  }
   
   return (
     <div className="min-h-screen py3">
@@ -287,7 +290,7 @@ export default function BugReportsPage() {
                     
                     {/* Meta Info */}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                      <span>Reported by {isLoading ? 'Loading...' : userName}</span>
+                      <span>Reported by {getReporterName(bug.user_email)}</span>
                       <span>•</span>
                       <span>{formatDate(bug.created_at)}</span>
                       {bug.comments_count > 0 && (

@@ -172,7 +172,7 @@ const About = () => {
       </div>
 
       {/* MOBILE TEXT ONLY - No cards, just plain text */}
-      <div ref={mobileTextRef} className="md:hidden absolute left-4 top-85 -translate-y-1/2 max-w-xs">
+      <div ref={mobileTextRef} className="md:hidden absolute left-4 top-75 -translate-y-1/2 max-w-xs">
         <h2 className="text-2xl font-semibold text-yellow-400 tracking-wider font-amiamie mb-2">
           Crafting agents
         </h2>

@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, Loader2, XCircle, ArrowRight, Home } from 'lucide-react';
 import { verifyPayment, getUserProfile, UserProfile, APIError } from '@/lib/api';
+import { recordTestPurchase } from '@/lib/testPaymentLimiter';
 
 function PaymentSuccessContent() {
   const router = useRouter();
@@ -45,10 +46,16 @@ function PaymentSuccessContent() {
         setVerified(true);
         setCredits(response.credits_added);
         setNewBalance(response.new_balance);
-        
+
+           
         // Load updated user profile
         const profile = await getUserProfile();
         setUserProfile(profile);
+
+        // ✅ TEST MODE: Record successful test purchase
+        recordTestPurchase();
+        // REASON: Lock user from buying again for 30 days (only after confirmed payment)
+
       } else {
         setError(response.message || 'Payment verification failed');
       }
