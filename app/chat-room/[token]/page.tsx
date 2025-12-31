@@ -924,20 +924,21 @@ const clearSessionFromLocalStorage = () => {
       </div>
 
       {/* Collapse Button */}
-      <button
+          <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className={`
           fixed top-6 w-8 h-8 
           flex items-center justify-center z-50
-          ${sidebarOpen ? 'lg:left-[200px]' : 'lg:left-4'}
-          left-4
+          transition-all duration-300
+          ${sidebarOpen ? 'left-[210px]' : 'left-4'}
+          ${sidebarOpen ? 'lg:left-[210px]' : 'lg:left-4'}
         `}
       >
         {sidebarOpen ? 
-        <Icon icon="ic:sharp-menu-open" width="24" height="24" className="text-white hover:text-[#fdc10a] hover:scale-107" /> 
-        : <Icon icon="heroicons:bars-3" width="20" height="20" className="text-white hover:text-[#fdc10a] hover:scale-107" />}
+          <Icon icon="ic:sharp-menu-open" width="24" height="24" className="text-white hover:text-[#fdc10a] hover:scale-107" /> 
+          : <Icon icon="heroicons:bars-3" width="20" height="20" className="text-white hover:text-[#fdc10a] hover:scale-107" />
+        }
       </button>
-
       {/* Main Chat Area */}
       <div className={`
         flex flex-col transition-all duration-300
