@@ -332,69 +332,73 @@ const handleCreateShareLink = (agent: Agent) => {
 
 return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background p-6">
-        <h1 className="text-4xl font-amiamie font-semibold mb-3 text-primary">
+      <div className="min-h-screen bg-background lg:p-6 p-3">
+        <h1 className="lg:text-4xl text-2xl font-amiamie font-semibold mb-3 text-primary">
           My AI Agents:
         </h1>
 
         {/* ========== SECTION 3A: CHAT DIV (Conditional) ========== */}
         {selectedAgent ? (
           <div className="mb-8 border border-gray-400 bg-gradient-to-br
-           from-gray-900 via-slate-800 to-cyan-900 rounded-3xl p-5 h-[670px] flex flex-col overflow-hidden">
+           from-gray-900 via-slate-800 to-cyan-900 rounded-3xl p-5 
+           h-[670px] flex flex-col overflow-hidden 
+           -mx-6 w-screen sm:mx-0 sm:w-auto">
+
             {/* Header */}
-            <div className="backdrop-blur-sm mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-200 font-amiamie">
+            <div className="backdrop-blur-sm mb-3 sm:mb-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-200 font-amiamie truncate">
                     {selectedAgent.agent_name}
                   </h2>
-                  <p className="text-sm text-slate-400 line-clamp-1">
+                  <p className="text-xs sm:text-sm text-slate-400 line-clamp-1">
                     {selectedAgent.character_prompt}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <button
                     onClick={() => setVoiceEnabled(!voiceEnabled)}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                       voiceEnabled 
                         ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
                         : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                     }`}
                   >
-                    {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                    {voiceEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </button>
                   <button
                     onClick={() => setSelectedAgent(null)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition-colors"
+                    className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs sm:text-sm transition-colors whitespace-nowrap"
                   >
-                    Close Chat
+                    <span className="hidden sm:inline">Close Chat</span>
+                    <span className="sm:hidden">Close</span>
                   </button>
                 </div>
               </div>
             </div>
 
             {/* AI Avatar */}
-            <div className="flex items-center justify-center py-3">
+            <div className="flex items-center justify-center py-2 sm:py-3">
               <div className="relative">
                 <div className={`absolute inset-0 rounded-full transition-all duration-300 ${
                   isSpeaking ? 'animate-pulse scale-110' : 'scale-100'
                 }`}>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-50"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-xl sm:blur-2xl opacity-50"></div>
                 </div>
                 
-                <div className={`relative w-35 h-35 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ${
+                <div className={`relative w-24 h-24 sm:w-28 sm:h-28 lg:w-35 lg:h-35 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ${
                   isSpeaking 
                     ? 'animate-[pulse_0.8s_ease-in-out_infinite] shadow-2xl shadow-blue-500/50' 
                     : 'shadow-xl'
                 }`}>
-                  <div className="absolute inset-4 flex items-center justify-center">
+                  <div className="absolute inset-3 sm:inset-4 flex items-center justify-center">
                     {isSpeaking && (
                       <>
                         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-ping"></div>
                         <div className="absolute inset-2 rounded-full bg-gradient-to-r from-blue-500/30 to-purple-500/30 animate-pulse"></div>
                       </>
                     )}
-                    <div className={`text-4xl transition-transform duration-300 ${
+                    <div className={`text-3xl sm:text-4xl transition-transform duration-300 ${
                       isSpeaking ? 'scale-110' : 'scale-100'
                     }`}>
                       {/*......*/}
@@ -402,20 +406,20 @@ return (
                   </div>
                 </div>
 
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-xs">
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-2 sm:px-3 py-0.5 sm:py-1 bg-slate-900 border border-slate-800 rounded-full text-[10px] sm:text-xs whitespace-nowrap">
                   {isProcessing ? (
                     <span className="text-yellow-400 flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
                       Thinking...
                     </span>
                   ) : isSpeaking ? (
                     <span className="text-blue-400 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-pulse"></div>
                       Speaking
                     </span>
                   ) : isRecording ? (
                     <span className="text-red-400 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-400 rounded-full animate-pulse"></div>
                       Listening
                     </span>
                   ) : (
@@ -426,22 +430,22 @@ return (
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
-              <div className="space-y-3">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="space-y-2 sm:space-y-3">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`lg:max-w-[75%] max-w-[50%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] rounded-2xl px-3 sm:px-4 py-2 sm:py-3 ${
                         message.role === 'user'
                           ? 'bg-slate-600 text-white'
                           : 'bg-slate-800 text-slate-100'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
-                      <p className="text-xs mt-1 opacity-70">
+                      <p className="text-xs sm:text-sm break-words">{message.content}</p>
+                      <p className="text-[10px] sm:text-xs mt-1 opacity-70">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -452,21 +456,21 @@ return (
             </div>
 
             {/* Input Area */}
-            <div className="backdrop-blur-sm pt-4 border-t border-slate-700">
-              <div className="flex items-center gap-3">
+            <div className="backdrop-blur-sm pt-3 sm:pt-4 border-t border-slate-700 px-3 sm:px-0">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isProcessing}
-                  className={`p-3 rounded-full transition-all ${
+                  className={`p-2 sm:p-3 rounded-full transition-all flex-shrink-0 ${
                     isRecording
                       ? 'bg-red-600 hover:bg-red-700 animate-pulse'
                       : 'bg-slate-800 hover:bg-slate-700'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isRecording ? (
-                    <MicOff className="w-5 h-5 text-white" />
+                    <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   ) : (
-                    <Mic className="w-5 h-5 text-white" />
+                    <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   )}
                 </button>
 
@@ -479,25 +483,28 @@ return (
                     placeholder="Type your message..."
                     disabled={isProcessing || isRecording}
                     className="flex-1 bg-slate-950 border border-slate-800
-                     rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none
+                     rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base
+                      text-white placeholder-slate-500 focus:outline-none
                       focus:border-blue-500 transition-colors disabled:opacity-50"
                   />
                   <button
                     onClick={sendTextMessage}
                     disabled={!inputMessage.trim() || isProcessing || isRecording}
-                    className="lg:px-6 lg:py-3 py-2 px-1 lg:bg-blue-600 hover:bg-blue-700 lg:disabled:bg-slate-800
-                     disabled:cursor-not-allowed text-white rounded-xl transition-colors flex items-center gap"
+                    className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 bg-blue-600
+                     hover:bg-blue-700 disabled:bg-slate-800
+                     disabled:cursor-not-allowed text-white rounded-xl transition-colors 
+                     flex items-center justify-center flex-shrink-0"
                   >
                     {isProcessing ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500 text-center mt-2">
+              <p className="text-[10px] sm:text-xs text-slate-500 text-center mt-2 px-2">
                 {voiceEnabled ? 'Voice responses enabled' : 'Voice responses disabled'} • 
                 {isRecording ? ' Recording...' : ' Click mic to speak or type your message'}
               </p>

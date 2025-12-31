@@ -78,9 +78,13 @@ const RippleGrid = ({
     };
 
     try {
+      // ✅ Optimize for mobile
+      const isMobile = window.innerWidth < 768;
+      
       const renderer = new Renderer({
-        dpr: Math.min(window.devicePixelRatio, 2),
-        alpha: true
+        dpr: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
+        alpha: true,
+        antialias: !isMobile // Disable antialiasing on mobile for better performance
       });
       const gl = renderer.gl;
       

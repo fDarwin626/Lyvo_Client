@@ -167,9 +167,8 @@ export default function DocumentationPage() {
                You can choose from pre-built voices or your own cloned voices.</p>
               <p><strong>Step 3:</strong> Enter the text you want to convert. You can paste up to 5,000 characters at once
               (no emojies or special characters).</p>
-              <p><strong>Step 4:</strong> Choose your desired language from the 11 supported options.</p>
-              <p><strong>Step 5:</strong> Click "Generate Speech" and wait for the audio to process (usually 5-15 seconds).</p>
-              <p><strong>Step 6:</strong> Download your audio file or play it directly in the browser.</p>
+              <p><strong>Step 4:</strong> Click "Generate Speech" and wait for the audio to process (usually 5-15 seconds).</p>
+              <p><strong>Step 5:</strong> Download your audio file or play it directly in the browser.</p>
             </div>
 
             <h3 className="text-xl font-bold text-gray-900 mt-6 mb-3" style={{ fontFamily: 'Georgia, serif' }}>

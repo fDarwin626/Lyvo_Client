@@ -83,9 +83,8 @@ function HistoryPage() {
 
 // ========== AUDIO PLAYER FUNCTIONS ==========
 const handlePlay = (audioUrl: string, name: string) => {
-    // ✅ Convert relative URL to full URL before playing
-    const fullUrl = getAudioUrl(audioUrl);
-    setPlayingAudio({ url: fullUrl, name });
+    // Pass the relative URL directly - AudioPlayer will convert it
+    setPlayingAudio({ url: audioUrl, name });
     setShowPlayer(true);
 };
 

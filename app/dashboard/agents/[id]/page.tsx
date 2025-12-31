@@ -288,7 +288,8 @@ export default function AgentChatPage() {
   if (error) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900
+         to-slate-950 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-red-400 mb-4">Error</h2>
             <p className="text-slate-300">{error}</p>
@@ -320,11 +321,13 @@ export default function AgentChatPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flax lg:mb-4 mb-0 font-amiamie font-semibold text-4xl">
-        <h1>Agent Chat Room:<span></span></h1>
-      </div>
-      <div className="lg:h-[670px]  h-fit border p-5 mb-50 bg-gradient-to-br from-gray-900
-       via-slate-800 to-cyan-900 border-gray-400 rounded-3xl flex flex-col overflow-hidden">
+      <div className="-mx-4 sm:mx-0">
+        <div className="flex lg:mb-4 mb-0 font-amiamie font-semibold lg:text-4xl  text-3xl px-10 sm:px-0">
+          <h1>Agent Chat Room:<span></span></h1>
+        </div>
+        <div className="lg:h-[670px] h-[700px] border lg:p-5 p-3 mb-50 bg-gradient-to-br from-gray-900
+         via-slate-800 to-cyan-900 border-gray-400 rounded-3xl flex flex-col overflow-hidden
+         w-full sm:w-auto">
         {/* Header */}
         <div className="backdrop-blur-sm">
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -481,6 +484,6 @@ export default function AgentChatPage() {
           </div>
         </div>
       </div>
+      </div>
     </ProtectedRoute>
-  );
-}
+  )}

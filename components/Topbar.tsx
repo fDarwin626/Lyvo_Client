@@ -50,7 +50,7 @@ export default function TopBar() {
       {/* RIGHT SIDE - Actions */}
       <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
         {/* Dark And Light Mode Toggle */}
-        <button
+       { /* <button
           onClick={toggleTheme}
           className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           aria-label="Toggle dark mode"
@@ -60,7 +60,7 @@ export default function TopBar() {
           ) : (
             <Icon icon="mdi:moon-waning-crescent" width="20" height="20" className="sm:w-6 sm:h-6 text-primary" />
           )}
-        </button>
+        </button> */}
 
         {/* ✅ Your TopBar Button - Controls the widget */}
         <button 

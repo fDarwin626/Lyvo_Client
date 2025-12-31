@@ -10,11 +10,12 @@ import {
 } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
-//  Add interface for props
 interface SupportChatWidgetProps {
-  isOpen?: boolean;           // External control
-  onToggle?: () => void;      // External toggle function
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
+
+type Position = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
 export default function SupportChatWidget({ 
   isOpen: externalIsOpen, 
@@ -22,26 +23,25 @@ export default function SupportChatWidget({
 }: SupportChatWidgetProps = {}) {
   const router = useRouter();
   
-  // Internal state (fallback if no external control)
   const [internalIsOpen, setInternalIsOpen] = useState(false);
-  
-  // Use external state if provided, otherwise use internal
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const toggleOpen = externalOnToggle || (() => setInternalIsOpen(!internalIsOpen));
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [conversationId, setConversationId] = useState<string | undefined>();
-  
-  // UI state
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Refs
+  // Drag state - only edge positions allowed
+  const [position, setPosition] = useState<Position>('bottom-right');
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   
-  // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -50,14 +50,12 @@ export default function SupportChatWidget({
     scrollToBottom();
   }, [messages]);
   
-  // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isOpen]);
   
-  // Add welcome message on first open
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([{
@@ -69,11 +67,112 @@ export default function SupportChatWidget({
     }
   }, [isOpen]);
   
-  // Send message
+  // Get CSS position based on edge position
+  const getPositionStyles = (pos: Position, dragging: boolean = false) => {
+    const offset = 24; // 24px from edges
+    
+    if (dragging) {
+      // Show at drag position while dragging
+      return {
+        position: 'fixed' as const,
+        left: `${dragPosition.x}px`,
+        top: `${dragPosition.y}px`,
+        transform: 'translate(-50%, -50%)'
+      };
+    }
+    
+    // Snap to edges
+    switch (pos) {
+      case 'bottom-right':
+        return { position: 'fixed' as const, right: `${offset}px`, bottom: `${offset}px` };
+      case 'bottom-left':
+        return { position: 'fixed' as const, left: `${offset}px`, bottom: `${offset}px` };
+      case 'top-right':
+        return { position: 'fixed' as const, right: `${offset}px`, top: `${offset}px` };
+      case 'top-left':
+        return { position: 'fixed' as const, left: `${offset}px`, top: `${offset}px` };
+    }
+  };
+  
+  // Determine nearest edge position based on drag coordinates
+  const getNearestEdgePosition = (x: number, y: number): Position => {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    const isLeft = x < windowWidth / 2;
+    const isTop = y < windowHeight / 2;
+    
+    if (isTop && isLeft) return 'top-left';
+    if (isTop && !isLeft) return 'top-right';
+    if (!isTop && isLeft) return 'bottom-left';
+    return 'bottom-right';
+  };
+  
+  // Drag handlers - Mouse
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isOpen) return;
+    e.preventDefault();
+    setIsDragging(true);
+    setDragPosition({ x: e.clientX, y: e.clientY });
+  };
+  
+  // Drag handlers - Touch
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isOpen) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragPosition({ x: touch.clientX, y: touch.clientY });
+  };
+  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setDragPosition({ x: e.clientX, y: e.clientY });
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      setDragPosition({ x: touch.clientX, y: touch.clientY });
+    };
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      // Snap to nearest edge
+      const nearestEdge = getNearestEdgePosition(e.clientX, e.clientY);
+      setPosition(nearestEdge);
+      setIsDragging(false);
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isDragging) return;
+      
+      const touch = e.changedTouches[0];
+      const nearestEdge = getNearestEdgePosition(touch.clientX, touch.clientY);
+      setPosition(nearestEdge);
+      setIsDragging(false);
+    };
+    
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [isDragging]);
+  
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     
-    // Check authentication
     if (!isAuthenticated()) {
       router.push('/auth/signin?redirect=/dashboard');
       return;
@@ -83,7 +182,6 @@ export default function SupportChatWidget({
     setInputMessage('');
     setError(null);
     
-    // Add user message to UI
     const tempUserMsg: ChatMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
@@ -91,23 +189,15 @@ export default function SupportChatWidget({
       created_at: new Date().toISOString()
     };
     setMessages(prev => [...prev, tempUserMsg]);
-    
-    // Show typing indicator
     setIsTyping(true);
     
     try {
-      // Call API
-      const response: ChatResponse = await sendChatMessage(
-        userMessage,
-        conversationId
-      );
+      const response: ChatResponse = await sendChatMessage(userMessage, conversationId);
       
-      // Save conversation ID
       if (!conversationId) {
         setConversationId(response.conversation_id);
       }
       
-      // Add bot response
       const botMessage: ChatMessage = {
         id: response.message_id || `bot-${Date.now()}`,
         role: 'bot',
@@ -119,7 +209,6 @@ export default function SupportChatWidget({
       
       setMessages(prev => [...prev, botMessage]);
       
-      // If escalated, show special message
       if (response.type === 'escalate' && response.ticket_id) {
         const escalationMsg: ChatMessage = {
           id: `escalation-${Date.now()}`,
@@ -131,15 +220,13 @@ export default function SupportChatWidget({
       }
       
     } catch (err: any) {
-      setError(' Opps Something went wrong.Failed to send message');
-      // Remove temp user message on error
+      setError('Oops! Something went wrong. Failed to send message');
       setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
     } finally {
       setIsTyping(false);
     }
   };
   
-  // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -147,12 +234,9 @@ export default function SupportChatWidget({
     }
   };
   
-  // Submit feedback
   const handleFeedback = async (messageId: string, helpful: boolean) => {
     try {
       await submitChatFeedback(messageId, helpful);
-      
-      // Update message in UI
       setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, was_helpful: helpful } : msg
       ));
@@ -161,7 +245,6 @@ export default function SupportChatWidget({
     }
   };
   
-  // Format timestamp
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
@@ -170,17 +253,49 @@ export default function SupportChatWidget({
     });
   };
   
+  // Get chat window position based on button position
+  const getChatWindowStyles = () => {
+    const offset = 24;
+    const buttonSize = 64;
+    const gap = 16;
+    
+    switch (position) {
+      case 'bottom-right':
+        return { position: 'fixed' as const, right: `${offset}px`, bottom: `${offset + buttonSize + gap}px` };
+      case 'bottom-left':
+        return { position: 'fixed' as const, left: `${offset}px`, bottom: `${offset + buttonSize + gap}px` };
+      case 'top-right':
+        return { position: 'fixed' as const, right: `${offset}px`, top: `${offset + buttonSize + gap}px` };
+      case 'top-left':
+        return { position: 'fixed' as const, left: `${offset}px`, top: `${offset + buttonSize + gap}px` };
+    }
+  };
+  
   return (
     <>
-      {/* Floating Button - Only show if NOT externally controlled */}
+      {/* Floating Button - Snaps to edges */}
       {externalIsOpen === undefined && !isOpen && (
         <button
-          onClick={toggleOpen}
-          className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-50"
+          ref={buttonRef}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onClick={(e) => {
+            if (!isDragging) {
+              toggleOpen();
+            }
+          }}
+          style={{
+            ...getPositionStyles(position, isDragging),
+            cursor: isDragging ? 'grabbing' : 'grab',
+            touchAction: 'none',
+            opacity: isDragging ? 0.7 : 1,
+            transition: isDragging ? 'none' : 'all 0.3s ease'
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg hover:scale-110 z-50 select-none"
           aria-label="Open support chat"
         >
           <svg
-            className="w-6 h-6"
+            className="w-6 h-6 pointer-events-none"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -197,8 +312,10 @@ export default function SupportChatWidget({
       
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 lg:right-6  right-3 lg:w-96 w-86 h-[600px] bg-white rounded-lg 
-        shadow-2xl flex flex-col z-50 border border-gray-200">
+        <div 
+          style={getChatWindowStyles()}
+          className="lg:w-96 w-[calc(100vw-48px)] max-w-96 h-[600px] max-h-[80vh] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200"
+        >
           {/* Header */}
           <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -235,7 +352,6 @@ export default function SupportChatWidget({
                 >
                   <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                   
-                  {/* Timestamp */}
                   <p
                     className={`text-xs mt-1 ${
                       msg.role === 'user' ? 'text-blue-100' : 'text-gray-500'
@@ -244,7 +360,6 @@ export default function SupportChatWidget({
                     {formatTime(msg.created_at)}
                   </p>
                   
-                  {/* Feedback Buttons (only for bot messages) */}
                   {msg.role === 'bot' && msg.id !== 'welcome' && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
                       <span className="text-xs text-gray-500">Helpful?</span>
@@ -280,7 +395,6 @@ export default function SupportChatWidget({
               </div>
             ))}
             
-            {/* Typing Indicator */}
             {isTyping && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-lg p-3">
@@ -293,7 +407,6 @@ export default function SupportChatWidget({
               </div>
             )}
             
-            {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-700">{error}</p>

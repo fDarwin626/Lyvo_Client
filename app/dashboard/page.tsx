@@ -240,31 +240,31 @@ export default function DashboardPage() {
           <h2 className="text-lg lg:text-xl font-bold mb-3 lg:mb-4">Create or clone a voice</h2>
           <div className="space-y-3 lg:space-y-4">
             
-            {/* Voice Design */} 
-            <Link href="/generate">
+            {/*Clone Your Voice */} 
+            <Link href="/dashboard/voice-cloning">
               <div className="flex items-center mb-4 lg:mb-5 gap-3 lg:gap-4 p-3 lg:p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group">
-                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-red-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 lg:w-12 lg:h-12  bg-teal-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm lg:text-base font-semibold text-gray-900 group-hover:text-blue-600">Voice Design</h3>
-                  <p className="text-xs lg:text-sm text-gray-600">Design an entirely new voice from a text prompt</p>
+                  <h3 className="text-sm lg:text-base font-semibold text-gray-900 group-hover:text-blue-600"> Clone your Voice</h3>
+                  <p className="text-xs lg:text-sm text-gray-600"> Create a realistic digital clone of your voice</p>
                 </div>
               </div>
             </Link>
 
-            {/* Clone Your Voice */}
+            {/*Voice Design*/}
             <div className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 border border-gray-200 rounded-xl opacity-50 cursor-not-allowed">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-teal-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 lg:w-12 lg:h-12  bg-red-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm lg:text-base font-semibold text-gray-900">Clone your Voice</h3>
-                <p className="text-xs lg:text-sm text-gray-600">Create a realistic digital clone of your voice</p>
+                <h3 className="text-sm lg:text-base font-semibold text-gray-900">Voice Design</h3>
+                <p className="text-xs lg:text-sm text-gray-600">Design an entirely new voice from a text prompt </p>
                 <span className="text-xs text-gray-500 italic">Coming soon</span>
               </div>
             </div>
