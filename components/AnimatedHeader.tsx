@@ -26,31 +26,35 @@ const AnimatedHeaderSection = ({
     const contextRef = useRef<HTMLDivElement>(null)
     const headerRef = useRef<HTMLDivElement>(null)
 
-     useGSAP(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: withScrollTrigger ? {
-            trigger: contextRef.current,    
-        }: undefined
-      });
-      
-      tl.from(contextRef.current, {
-        y:'50vh',
-        duration:1,
-        ease: 'circ.out'
-      })
-      
-      tl.from(headerRef.current, {
-        opacity: 0,
-        y:"200",
-        duration: 1,
-        ease: "circ.out"
-      }, "<+0.2")
-      
-      return() => {
-        if(tl.scrollTrigger) tl.scrollTrigger.kill();
-        tl.kill();
-      }
-     }, [withScrollTrigger])
+    useGSAP(() => {
+  const tl = gsap.timeline({
+    scrollTrigger: withScrollTrigger ? {
+        trigger: contextRef.current,
+        start: "top 80%",
+        once: true,
+    }: undefined
+  });
+  
+  tl.from(contextRef.current, {
+    y: '50vh',
+    duration: 0.9,
+    ease: 'power2.out',
+    force3D: true,
+  })
+  
+  tl.from(headerRef.current, {
+    opacity: 0,
+    y: 200,
+    duration: 0.9,
+    ease: "power2.out",
+    force3D: true,
+  }, "<+0.2")
+  
+  return () => {
+    if (tl.scrollTrigger) tl.scrollTrigger.kill();
+    tl.kill();
+  }
+}, [withScrollTrigger])
 
   return (
     <div ref={contextRef} className="">

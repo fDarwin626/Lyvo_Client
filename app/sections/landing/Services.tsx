@@ -46,34 +46,33 @@ const Services = () => {
     })
   }, [servicesData])
 
-  // Auto-scroll functionality
-  useEffect(() => {
-    if (isUserInteracting.current) return
+// Auto-scroll functionality - OPTIMIZED
+useEffect(() => {
+  if (isUserInteracting.current) return
 
-    const duration = 5000
-    
-    timerRef.current = setTimeout(() => {
-      setActiveIndex((current) => (current + 1) % servicesData.length)
-    }, duration)
-    
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [activeIndex, servicesData.length])
+  const timer = setTimeout(() => {
+    setActiveIndex((current) => (current + 1) % servicesData.length)
+  }, 5000)
+  
+  return () => clearTimeout(timer)
+}, [activeIndex, servicesData.length])
 
-  // Smooth scroll to active card
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      const container = scrollContainerRef.current
-      const cardWidth = 420 // card width (400) + gap (20)
-      const scrollPosition = activeIndex * cardWidth
-      
-      container.scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      })
-    }
-  }, [activeIndex])
+// Smooth scroll to active card - OPTIMIZED
+useEffect(() => {
+  const container = scrollContainerRef.current
+  if (!container) return
+  
+  const cardWidth = 420
+  const scrollPosition = activeIndex * cardWidth
+  
+  // Use requestAnimationFrame for smoother scrolling
+  requestAnimationFrame(() => {
+    container.scrollTo({
+      left: scrollPosition,
+      behavior: 'smooth'
+    })
+  })
+}, [activeIndex])
 
   const handleCardInteraction = (index: number) => {
     isUserInteracting.current = true
@@ -119,13 +118,14 @@ const Services = () => {
             
             return (
               <div 
-                key={index}
-                className={`lg:min-w-[400px] min-w-[350px] h-[500px] rounded-3xl overflow-hidden
-                  snap-center transition-all duration-500 ease-out
-                  ${isActive ? 'blur-0 scale-100 opacity-100' : 'blur-sm scale-95 opacity-70'}`}
-                onMouseEnter={() => handleCardInteraction(index)}
-                onClick={() => handleCardInteraction(index)}
-              >
+                  key={index}
+                  className={`lg:min-w-[400px] min-w-[350px] h-[500px] rounded-3xl overflow-hidden
+                    snap-center transition-all duration-500 ease-out will-change-transform
+                    ${isActive ? 'blur-0 scale-100 opacity-100' : 'blur-sm scale-95 opacity-70'}`}
+                  onMouseEnter={() => handleCardInteraction(index)}
+                  onClick={() => handleCardInteraction(index)}
+                  style={{ transform: 'translateZ(0)' }}
+                >
                 {/* TOP HALF - COLOR */}
                 <div className={`h-1/2 ${service.color} flex flex-col items-start justify-center p-8`}>
                   <h3 className="text-white font-amiamie-round text-2xl font-bold mb-3">

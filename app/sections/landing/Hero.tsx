@@ -39,34 +39,29 @@ const Hero = () => {
       .then(() => setAllLoaded(true));
   }, []);
 
-  useEffect(() => {
-    if (!allLoaded) return;
+useEffect(() => {
+  if (!allLoaded) return;
 
-    const duration = 3000;
-    
-    timerRef.current = setTimeout(() => {
-      setCurrentIndex((current) => {
-        const nextIndex = current + direction;
-        
-        if (nextIndex >= sliders.length - 1) {
-          setDirection(-1);
-          return sliders.length - 1;
-        }
-        
-        if (nextIndex <= 0) {
-          setDirection(1);
-          return 0;
-        }
-        
-        return nextIndex;
-      });
-    }, duration);
-    
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [currentIndex, direction, sliders.length, allLoaded]);
-
+  const interval = setInterval(() => {
+    setCurrentIndex((current) => {
+      const nextIndex = current + direction;
+      
+      if (nextIndex >= sliders.length - 1) {
+        setDirection(-1);
+        return sliders.length - 1;
+      }
+      
+      if (nextIndex <= 0) {
+        setDirection(1);
+        return 0;
+      }
+      
+      return nextIndex;
+    });
+  }, 3000);
+  
+  return () => clearInterval(interval);
+}, [direction, sliders.length, allLoaded]);
   const handleDotClick = (index: number) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setCurrentIndex(index);
@@ -96,15 +91,16 @@ const Hero = () => {
 
           return (
             <div 
-              className="absolute will-change-transform transition-all duration-700 ease-in-out"
-              key={slide.id}
-              style={{
-                transform: `translateX(${offset * 90}%) translateX(${offset * 20}px) scale(${isActive ? 1 : 0.85})`,
-                zIndex: sliders.length - absOffset,
-                opacity: absOffset > 1 ? 0.3 : 1,
-                pointerEvents: isActive ? 'auto' : 'none',
-              }}
-            >
+                className="absolute will-change-transform transition-all duration-700 ease-in-out"
+                key={slide.id}
+                style={{
+                  transform: `translate3d(${offset * 90}%, 0, 0) translateX(${offset * 20}px) scale(${isActive ? 1 : 0.85})`,
+                  zIndex: sliders.length - absOffset,
+                  opacity: absOffset > 1 ? 0.3 : 1,
+                  pointerEvents: isActive ? 'auto' : 'none',
+                  backfaceVisibility: 'hidden',
+                }}
+              >
               <div className="relative">
                 <img
                   src={slide.image}

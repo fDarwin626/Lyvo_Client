@@ -20,35 +20,29 @@ const AnimatedTextLines = ({ text, className }: AnimatedTextLinesProps) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const lineRef = useRef<(HTMLSpanElement | null)[]>([])
 
-    useGSAP(() => {
-        if (lineRef.current.length > 0) {
-            // Use context for proper cleanup
-            const ctx = gsap.context(() => {
-                gsap.from(lineRef.current, {
-                    y: 100,
-                    opacity: 0,
-                    duration: 1,
-                    stagger: 0.3,
-                    ease: 'back.out',
-                    willChange: 'transform, opacity',
-                    scrollTrigger: {
-                        trigger: containerRef.current,
-                        // Performance optimizations
-                        fastScrollEnd: true,
-                        preventOverlaps: true,
-                    },
-                    onComplete: () => {
-                        // Clear will-change after animation
-                        lineRef.current.forEach(el => {
-                            if (el) gsap.set(el, { clearProps: 'willChange' })
-                        })
-                    }
-                })
-            }, containerRef)
-            
-            return () => ctx.revert() // Proper cleanup
-        }
-    }, { scope: containerRef, dependencies: [text] })
+  useGSAP(() => {
+    if (lineRef.current.length === 0) return;
+    
+    const ctx = gsap.context(() => {
+        gsap.from(lineRef.current, {
+            y: 100,
+            opacity: 0,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: 'power2.out',
+            force3D: true,
+            scrollTrigger: {
+                trigger: containerRef.current,
+                start: "top 80%",
+                fastScrollEnd: true,
+                preventOverlaps: true,
+                once: true,
+            },
+        })
+    }, containerRef)
+    
+    return () => ctx.revert()
+}, { scope: containerRef, dependencies: [text] })
     
   return (
     <div ref={containerRef} 

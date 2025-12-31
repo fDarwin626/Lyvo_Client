@@ -143,35 +143,35 @@ const Marquee = ({
     return tl;  // Fixed: return timeline directly, not a function
   }
 
-  useEffect(() => {
-    const filteredItems = itemsRef.current.filter((el): el is HTMLSpanElement => el !== null);
-    const tl = horizontalLoop(filteredItems, {
-      repeat: -1,
-      paddingRight: 30,
-      reversed: reverse,
-    });
+useEffect(() => {
+  if (!containerRef.current) return;
+  
+  const filteredItems = itemsRef.current.filter((el): el is HTMLSpanElement => el !== null);
+  if (filteredItems.length === 0) return;
+  
+  const tl = horizontalLoop(filteredItems, {
+    repeat: -1,
+    paddingRight: 30,
+    reversed: reverse,
+  });
 
-    const obs = Observer.create({
-      onChangeY(self) {
-        let factor = 2.5;
-        if ((!reverse && self.deltaY < 0) || (reverse && self.deltaY > 0)) {
-          factor *= -1;
-        } 
-        gsap.timeline({
-          defaults: {
-            ease: "none",
-          }
-        })
-        .to(tl, { timeScale: factor * 2.5, duration: 0.2, overwrite: true })
-        .to(tl, { timeScale: factor / 2.5, duration: 1 }, "+=0.3");
-      }
-    });
-    
-    return () => {
-      tl.kill();  // Fixed: call kill() directly
-      obs.kill();
-    };
-  }, [items, reverse]); 
+  const obs = Observer.create({
+    onChangeY(self) {
+      let factor = 2.5;
+      if ((!reverse && self.deltaY < 0) || (reverse && self.deltaY > 0)) {
+        factor *= -1;
+      } 
+      // Optimized: Direct gsap.to calls instead of timeline
+      gsap.to(tl, { timeScale: factor * 2.5, duration: 0.2, overwrite: true });
+      gsap.to(tl, { timeScale: factor / 2.5, duration: 1, delay: 0.3, overwrite: true });
+    }
+  });
+  
+  return () => {
+    tl.kill();
+    obs.kill();
+  };
+}, [reverse]); // Removed 'items' from dependencies
 
   return (
     <div 
