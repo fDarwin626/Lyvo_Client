@@ -354,16 +354,6 @@ export default function SpeechToTextPage() {
             )}
           </div>
 
-          {/* View History Link */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => router.push('/dashboard/speech-to-text/history')}
-              className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2 mx-auto"
-            >
-              <Icon icon="mdi:history" width="20" height="20" />
-              View Transcription History
-            </button>
-          </div>
         </div>
       </div>
     </ProtectedRoute>

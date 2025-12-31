@@ -611,13 +611,12 @@ function VoiceCloningPage () {
                                 <p className="text-green-700 font-medium">{success}</p>
                             </div>
                         )}
-
-                        {/* Clone Form */}
+                                                    {/* Clone Form */}
                         {clonesRemaining > 0 && (
-                            <div className="bg-white rounded-3xl p-8 mb-12  border border-gray-200">
-                                <h2 className="text-3xl font-bold mb-8 text-gray-900">Create Your Voice Clone</h2>
+                            <div className="bg-white rounded-3xl p-4 sm:p-8 mb-12 border border-gray-200">
+                                <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-gray-900">Create Your Voice Clone</h2>
                                 
-                                <div className="space-y-6">
+                                <div className="space-y-4 sm:space-y-6">
                                     {/* Voice Name */}
                                     <div>
                                         <label className="block text-sm font-semibold mb-2 text-gray-700">Voice Name *</label>
@@ -627,7 +626,7 @@ function VoiceCloningPage () {
                                             onChange={(e) => setVoiceName(e.target.value)}
                                             placeholder="e.g., My Voice"
                                             className="w-full bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                            px-4 py-3 focus:outline-none focus:border-black text-gray-900"
+                                            px-3 sm:px-4 py-2.5 sm:py-3 focus:outline-none focus:border-black text-gray-900 text-sm sm:text-base"
                                         />
                                     </div>
 
@@ -640,30 +639,29 @@ function VoiceCloningPage () {
                                             placeholder="Describe your voice..."
                                             rows={3}
                                             className="w-full bg-gray-50 border-2 border-gray-300 
-                                            rounded-xl px-4 py-3 focus:outline-none focus:border-black 
-                                            resize-none text-gray-900"
+                                            rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 focus:outline-none focus:border-black 
+                                            resize-none text-gray-900 text-sm sm:text-base"
                                         />
                                     </div>
+
 
                                     {/* Audio Mode Toggle */}
                                     <div>
                                         <label className="block text-sm font-semibold mb-3 text-gray-700">Choose Input Method *</label>
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                                             <button
                                                 onClick={() => {
                                                     setAudioMode("record")
                                                     setAudioFile(null)
                                                     setRecordedBlob(null)
                                                 }}
-                                                className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
+                                                className={`flex-1 py-3 sm:py-4 rounded-xl font-semibold transition-all text-sm sm:text-base ${
                                                     audioMode === "record"
                                                         ? "bg-black text-white shadow-lg"
-
-
                                                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                             }`}
                                         >
-                                            <Mic className="w-5 h-5 inline mr-2" />
+                                            <Mic className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
                                             Record Audio
                                         </button>
                                         <button
@@ -672,13 +670,13 @@ function VoiceCloningPage () {
                                                 setRecordedBlob(null)
                                                 setRecordingTime(0)
                                             }}
-                                            className={`flex-1 py-4 rounded-xl font-semibold transition-all ${
+                                            className={`flex-1 py-3 sm:py-4 rounded-xl font-semibold transition-all text-sm sm:text-base ${
                                                 audioMode === "upload"
                                                     ? "bg-black text-white shadow-lg"
                                                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                             }`}
                                         >
-                                            <Upload className="w-5 h-5 inline mr-2" />
+                                            <Upload className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
                                             Upload File
                                         </button>
                                     </div>
@@ -686,20 +684,20 @@ function VoiceCloningPage () {
 
                                 {/* Recording Interface */}
                                 {audioMode === "record" && (
-                                    <div className="border-2 border-purple-200 rounded-xl p-8 bg-purple-50">
+                                    <div className="border-2 border-purple-200 rounded-xl p-4 sm:p-8 bg-purple-50 mt-4 sm:mt-0">
                                         <div className="text-center">
                                             {!isRecording && !recordedBlob && (
                                                 <>
-                                                    <Mic className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-                                                    <p className="text-lg font-semibold mb-2 text-gray-900">Ready to Record</p>
-                                                    <p className="text-sm text-gray-600 mb-6">
+                                                    <Mic className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-purple-600" />
+                                                    <p className="text-base sm:text-lg font-semibold mb-2 text-gray-900">Ready to Record</p>
+                                                    <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6 px-4">
                                                         Record 10-20 seconds of clear speech
                                                     </p>
                                                     <button
                                                         onClick={startRecording}
-                                                        className="bg-red-500 hover:bg-red-600 text-white font-semibold px-8 py-4 rounded-full transition-all"
+                                                        className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-full transition-all text-sm sm:text-base"
                                                     >
-                                                        <Mic className="w-5 h-5 inline mr-2" />
+                                                        <Mic className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
                                                         Start Recording
                                                     </button>
                                                 </>
@@ -707,21 +705,21 @@ function VoiceCloningPage () {
 
                                             {isRecording && (
                                                 <>
-                                                    <div className="relative w-24 h-24 mx-auto mb-4">
+                                                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4">
                                                         <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                                                        <div className="relative w-24 h-24 bg-red-500 rounded-full flex items-center justify-center">
-                                                            <Mic className="w-12 h-12 text-white" />
+                                                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-red-500 rounded-full flex items-center justify-center">
+                                                            <Mic className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                                                         </div>
                                                     </div>
-                                                    <p className="text-3xl font-bold mb-2 text-gray-900">
+                                                    <p className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">
                                                         {recordingTime}s / {MAX_RECORDING_TIME}s
                                                     </p>
-                                                    <p className="text-sm text-gray-600 mb-6">Recording in progress...</p>
+                                                    <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">Recording in progress...</p>
                                                     <button
                                                         onClick={stopRecording}
-                                                        className="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-8 py-4 rounded-full transition-all"
+                                                        className="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-full transition-all text-sm sm:text-base"
                                                     >
-                                                        <StopCircle className="w-5 h-5 inline mr-2" />
+                                                        <StopCircle className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
                                                         Stop Recording
                                                     </button>
                                                 </>
@@ -729,13 +727,13 @@ function VoiceCloningPage () {
 
                                             {recordedBlob && !isRecording && (
                                                 <>
-                                                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                                        <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                         </svg>
                                                     </div>
-                                                    <p className="text-lg font-semibold mb-2 text-gray-900">Recording Complete!</p>
-                                                    <p className="text-sm text-gray-600 mb-6">
+                                                    <p className="text-base sm:text-lg font-semibold mb-2 text-gray-900">Recording Complete!</p>
+                                                    <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
                                                         {recordingTime} seconds recorded
                                                     </p>
                                                     <button
@@ -744,7 +742,7 @@ function VoiceCloningPage () {
                                                             setAudioFile(null)
                                                             setRecordingTime(0)
                                                         }}
-                                                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-xl transition-all"
+                                                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all text-sm sm:text-base"
                                                     >
                                                         Re-record
                                                     </button>
@@ -754,13 +752,13 @@ function VoiceCloningPage () {
                                     </div>
                                 )}
 
-                                {/* Upload Interface */}
+                                                                    {/* Upload Interface */}
                                 {audioMode === "upload" && (
-                                    <div>
+                                    <div className="mt-4 sm:mt-0">
                                         <label className="block text-sm font-semibold mb-2 text-gray-700">
                                             Upload Audio (WAV, MP3, FLAC, OGG) *
                                         </label>
-                                        <div className="border-2 border-dashed border-purple-300 rounded-xl p-12 text-center hover:border-purple-500 transition-colors cursor-pointer bg-purple-50">
+                                        <div className="border-2 border-dashed border-purple-300 rounded-xl p-6 sm:p-12 text-center hover:border-purple-500 transition-colors cursor-pointer bg-purple-50">
                                             <input
                                                 type="file"
                                                 accept="audio/wav,audio/mpeg,audio/mp3,audio/flac,audio/ogg"
@@ -769,17 +767,18 @@ function VoiceCloningPage () {
                                                 id="audio-upload"
                                             />
                                             <label htmlFor="audio-upload" className="cursor-pointer">
-                                                <Upload className="w-12 h-12 mx-auto mb-4 text-purple-600" />
-                                                <p className="text-lg font-semibold mb-2 text-gray-900">
+                                                <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-purple-600" />
+                                                <p className="text-base sm:text-lg font-semibold mb-2 text-gray-900 px-2">
                                                     {audioFile ? audioFile.name : "Click to upload audio"}
                                                 </p>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-xs sm:text-sm text-gray-600 px-2">
                                                     10-20 seconds • Max 10MB • Clear speech recommended
                                                 </p>
                                             </label>
                                         </div>
                                     </div>
                                 )}
+
 
                                 {/* Submit Button */}
                                 <button
@@ -788,7 +787,7 @@ function VoiceCloningPage () {
                                     className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654]
                                      hover: from-[#43C6AC] to-[#191654] disabled:from-gray-400
                                       disabled:to-gray-500 disabled:cursor-not-allowed text-white 
-                                      font-bold py-5 rounded-xl transition-all shadow-lg text-lg"
+                                      font-semibold lg:py-5  py-2 rounded-xl transition-all shadow-lg text-lg"
                                 >
                                     {cloning ? "Cloning Your Voice..." : " Clone My Voice" } 
                                 </button>
@@ -798,7 +797,7 @@ function VoiceCloningPage () {
 
                     {/* User's Clones */}
                     <div>
-                        <h2 className="text-3xl font-bold mb-8 text-gray-900">Your Cloned Voices</h2>
+                        <h2 className="lg:text-3xl text-2xl font-bold mb-8 text-gray-900">Your Cloned Voices</h2>
                         
                         {loading ? (
                             <p className="text-gray-600">Loading your clones...</p>

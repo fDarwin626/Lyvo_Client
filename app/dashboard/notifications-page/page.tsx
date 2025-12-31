@@ -125,13 +125,13 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-3 sm:p-4 lg:p-6">
       {/* Header */}
-      <div className="max-w-4xl mx-auto mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="max-w-4xl mx-auto mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-primary">Notifications</h1>
-            <p className="text-secondary mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary">Notifications</h1>
+            <p className="text-secondary mt-1 text-sm sm:text-base">
               Stay updated with your activity
             </p>
           </div>
@@ -140,9 +140,9 @@ useEffect(() => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors text-sm sm:text-base whitespace-nowrap"
             >
-              <Icon icon="mdi:check-all" width="20" height="20" />
+              <Icon icon="mdi:check-all" width="18" height="18" className="sm:w-5 sm:h-5" />
               Mark all read
             </button>
           )}
@@ -150,9 +150,9 @@ useEffect(() => {
 
         {/* Unread count indicator */}
         {unreadCount > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
-            <Icon icon="mdi:information" width="20" height="20" className="text-blue-500" />
-            <p className="text-sm text-blue-700">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 sm:p-3 flex items-center gap-2">
+            <Icon icon="mdi:information" width="18" height="18" className="text-blue-500 flex-shrink-0 sm:w-5 sm:h-5" />
+            <p className="text-xs sm:text-sm text-blue-700">
               You have <strong>{unreadCount}</strong> unread notification{unreadCount !== 1 ? 's' : ''}
             </p>
           </div>
@@ -163,80 +163,80 @@ useEffect(() => {
       <div className="max-w-4xl mx-auto">
         {loading ? (
           // Loading state
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-8 sm:py-12">
             <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-              <p className="text-secondary">Loading notifications...</p>
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-brand"></div>
+              <p className="text-secondary text-sm sm:text-base">Loading notifications...</p>
             </div>
           </div>
         ) : error ? (
           // Error state
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <Icon icon="mdi:alert-circle" width="48" height="48" className="text-red-500 mx-auto mb-3" />
-            <p className="text-red-700 font-medium">{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
+            <Icon icon="mdi:alert-circle" width="40" height="40" className="text-red-500 mx-auto mb-3 sm:w-12 sm:h-12" />
+            <p className="text-red-700 font-medium text-sm sm:text-base">{error}</p>
             <button
               onClick={fetchNotifications}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              className="mt-3 sm:mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm sm:text-base"
             >
               Try Again
             </button>
           </div>
         ) : notifications.length === 0 ? (
           // Empty state
-          <div className="bg-surface border border-default rounded-lg p-12 text-center">
-            <Icon icon="mdi:bell-off-outline" width="64" height="64" className="text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-primary mb-2">No notifications yet</h3>
-            <p className="text-secondary">
+          <div className="bg-surface border border-default rounded-lg p-8 sm:p-12 text-center">
+            <Icon icon="mdi:bell-off-outline" width="48" height="48" className="text-gray-300 mx-auto mb-3 sm:mb-4 sm:w-16 sm:h-16" />
+            <h3 className="text-lg sm:text-xl font-semibold text-primary mb-2">No notifications yet</h3>
+            <p className="text-secondary text-sm sm:text-base">
               You'll see notifications here when you use TTS, audiobooks, voice cloning, and more
             </p>
           </div>
         ) : (
           // Notifications list
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`bg-surface border rounded-lg p-4 transition-all cursor-pointer ${
+                className={`bg-surface border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${
                   notification.is_read
                     ? 'border-default'
                     : 'border-blue-300 bg-blue-50'
                 }`}
                 onClick={() => handleNotificationClick(notification)}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-2 sm:gap-4">
                   {/* Icon */}
-                  <div className={`text-3xl ${getNotificationColor(notification.type)}`}>
+                  <div className={`text-2xl sm:text-3xl flex-shrink-0 ${getNotificationColor(notification.type)}`}>
                     {getNotificationIcon(notification.type)}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-semibold text-primary">
+                      <h3 className="font-semibold text-primary text-sm sm:text-base">
                         {notification.title}
                       </h3>
                       
                       {/* NEW badge for unread */}
                       {!notification.is_read && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                          <Icon icon="mdi:new-box" width="14" height="14" />
+                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-full flex-shrink-0">
+                          <Icon icon="mdi:new-box" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
                           NEW
                         </span>
                       )}
                     </div>
 
-                    <p className="text-secondary text-sm mb-2">
+                    <p className="text-secondary text-xs sm:text-sm mb-2 line-clamp-2 sm:line-clamp-none">
                       {notification.message}
                     </p>
 
-                    <div className="flex items-center gap-4 text-xs text-muted">
+                    <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-muted">
                       <span className="flex items-center gap-1">
-                        <Icon icon="mdi:clock-outline" width="14" height="14" />
+                        <Icon icon="mdi:clock-outline" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
                         {notification.time_ago}
                       </span>
                       {notification.link && (
                         <span className="flex items-center gap-1 text-blue-500">
-                          <Icon icon="mdi:arrow-right" width="14" height="14" />
+                          <Icon icon="mdi:arrow-right" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
                           View details
                         </span>
                       )}
@@ -251,13 +251,13 @@ useEffect(() => {
                         handleDelete(notification.id, notification.is_read);
                       }}
                       disabled={deletingId === notification.id}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                      className="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                       title="Delete notification"
                     >
                       {deletingId === notification.id ? (
-                        <Icon icon="mdi:loading" width="20" height="20" className="animate-spin" />
+                        <Icon icon="mdi:loading" width="18" height="18" className="animate-spin sm:w-5 sm:h-5" />
                       ) : (
-                        <Icon icon="mdi:delete-outline" width="20" height="20" />
+                        <Icon icon="mdi:delete-outline" width="18" height="18" className="sm:w-5 sm:h-5" />
                       )}
                     </button>
                   )}

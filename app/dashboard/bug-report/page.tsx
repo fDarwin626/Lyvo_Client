@@ -157,10 +157,10 @@ export default function BugReportsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4 flex flex-row gap-2 border-b border-default">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4 flex flex-row gap-2 lg:border-b border-default">
             <Icon icon="marketeq:bug" width="30" height="30" className="color: #828282" /> Bug Reports
           </h1>
-          <p className="text-gray-600/45 text-xl lg:text-xl">
+          <p className="text-gray-600/45 text-sm lg:text-xl">
             Found or noticed a bug on our page? Report it here so we can fix it!
           </p>
         </div>

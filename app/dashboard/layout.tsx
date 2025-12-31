@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { CreditProvider } from '../contexts/CreditContext';
 import { Icon } from '@iconify/react';
 import SupportChatWidget from '@/components/chat/SupportChatWidget';
+import SmoothScrollProvider from '@/components/SmoothScrollProvider';
 
 export default function DashboardLayout({ 
   children 
@@ -55,7 +56,9 @@ export default function DashboardLayout({
 
           {/* CONTENT - This changes based on route */}
           <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto">
+            <SmoothScrollProvider>
             {children}
+            </SmoothScrollProvider>
             <SupportChatWidget />
           </main>
           

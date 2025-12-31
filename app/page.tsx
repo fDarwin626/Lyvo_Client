@@ -7,28 +7,35 @@ import Navbar from "@/components/Navbar"
 import About from "./sections/landing/About"
 import Services from "./sections/landing/Services"
 import Footer from "./sections/landing/Footer"
+import SmoothScrollProvider from "@/components/SmoothScrollProvider"
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Wait for all images and content to load
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500); // Adjust delay as needed
-
-    // Also check if document is fully loaded
+    // Check if document is already loaded
     if (document.readyState === 'complete') {
-      setIsLoading(false);
-    } else {
-      window.addEventListener('load', () => setIsLoading(false));
+      setIsLoading(false)
+      return
     }
 
+    // Wait for window load event
+    const handleLoad = () => {
+      setIsLoading(false)
+    }
+
+    window.addEventListener('load', handleLoad)
+
+    // Fallback timer in case load event doesn't fire
+    const fallbackTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000)
+
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('load', () => setIsLoading(false));
-    };
-  }, []);
+      window.removeEventListener('load', handleLoad)
+      clearTimeout(fallbackTimer)
+    }
+  }, [])
 
   if (isLoading) {
     return (
@@ -44,17 +51,17 @@ export default function Home() {
           <p className="text-gray-600 font-medium animate-pulse">Loading Lyvo...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <>
+    <SmoothScrollProvider>
       <Navbar />
       <Hero />
       <AboutSummary />
       <About />
       <Services />
       <Footer />
-    </>
-  );
+    </SmoothScrollProvider>
+  )
 }

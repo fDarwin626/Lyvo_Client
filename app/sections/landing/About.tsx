@@ -11,104 +11,59 @@ const About = () => {
     const text = `Deliver new experiences and save costs for your enterprise
     Build the most advanced audio models into your product with our Agents`
 
-    const card1Ref = useRef(null)
-    const card2Ref = useRef(null)
-    const card3Ref = useRef(null)
-    const mobileTextRef = useRef(null)
-    const containerRef = useRef(null)
+    const card1Ref = useRef<HTMLDivElement>(null)
+    const card2Ref = useRef<HTMLDivElement>(null)
+    const card3Ref = useRef<HTMLDivElement>(null)
+    const mobileTextRef = useRef<HTMLDivElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
 
     useGSAP(() => {
-      // Animation for card 1 - slides from left
-      if (card1Ref.current) {
-        gsap.fromTo(
-          card1Ref.current,
-          {
-            x: -100,
-            opacity: 0,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card1Ref.current,
-              start: "top 80%",
-              end: "top 50%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        )
-      }
+      // Use single timeline for better performance
+      const ctx = gsap.context(() => {
+        // Batch animations for better performance
+        const cards = [
+          { ref: card1Ref, x: -100 },
+          { ref: card2Ref, x: 100 },
+          { ref: card3Ref, x: -100 },
+          { ref: mobileTextRef, x: -100 }
+        ]
 
-      // Animation for card 2 - slides from right
-      if (card2Ref.current) {
-        gsap.fromTo(
-          card2Ref.current,
-          {
-            x: 100,
-            opacity: 0,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card2Ref.current,
-              start: "top 80%",
-              end: "top 50%",
-              toggleActions: "play none none reverse",
-            },
+        cards.forEach(({ ref, x }) => {
+          if (ref.current) {
+            gsap.fromTo(
+              ref.current,
+              {
+                x,
+                opacity: 0,
+                willChange: 'transform, opacity'
+              },
+              {
+                x: 0,
+                opacity: 1,
+                duration: 0.8,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: ref.current,
+                  start: "top 80%",
+                  end: "top 50%",
+                  toggleActions: "play none none reverse",
+                  // Performance optimization
+                  fastScrollEnd: true,
+                  preventOverlaps: true,
+                },
+                onComplete: () => {
+                  // Remove will-change after animation completes
+                  if (ref.current) {
+                    gsap.set(ref.current, { clearProps: 'willChange' })
+                  }
+                }
+              }
+            )
           }
-        )
-      }
+        })
+      }, containerRef)
 
-      // Animation for card 3 - slides from left
-      if (card3Ref.current) {
-        gsap.fromTo(
-          card3Ref.current,
-          {
-            x: -100,
-            opacity: 0,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card3Ref.current,
-              start: "top 80%",
-              end: "top 50%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        )
-      }
-
-      // Animation for mobile text - slides from left
-      if (mobileTextRef.current) {
-        gsap.fromTo(
-          mobileTextRef.current,
-          {
-            x: -100,
-            opacity: 0,
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: mobileTextRef.current,
-              start: "top 80%",
-              end: "top 50%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        )
-      }
+      return () => ctx.revert() // Cleanup all animations
     }, { scope: containerRef, dependencies: [] })
 
   return (
@@ -134,6 +89,8 @@ const About = () => {
         src="/images/photo3.jpg" 
         className="w-[100%] h-[60%] mix-blend-lighten" 
         alt="agent photo"
+        loading="lazy"
+        decoding="async"
       />
       
       {/* DESKTOP CARDS - Hidden on mobile */}
