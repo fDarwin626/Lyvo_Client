@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated, getAdminStats } from '@/lib/api'; // Import getAdminStats
+import { isAuthenticated, getAdminStats } from '@/lib/api';
 import AdminSidebar from '@/components/AdminSidebar';
 
 export default function AdminLayout({
@@ -18,38 +18,61 @@ export default function AdminLayout({
   }, []);
 
   const validateAdminAccess = async () => {
-    // Check authentication immediately
+    // STEP 1: Check if device is mobile (FIRST line of defense)
+    const isMobile = checkIfMobile();
+    
+    if (isMobile) {
+      // Mobile user (admin or not) - stay in 404, then redirect
+      // Brief delay so they see the 404 (looks natural)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      router.push('/');
+      return; // Exit - never proceed further
+    }
+
+    // STEP 2: Check authentication (desktop users only reach here)
     const authenticated = isAuthenticated();
 
     if (!authenticated) {
-      // NOT authenticated - redirect and STAY in 404 waiting room
+      // NOT authenticated desktop user - redirect
       router.push('/');
-      return; // Exit immediately - never change pageState
+      return;
     }
 
-    // Authenticated - now check if they're actually an admin
-    // We do this by trying to fetch admin stats
+    // STEP 3: Verify admin privileges (authenticated desktop user)
     try {
-      await getAdminStats(); // This will throw 401/403 if not admin
+      await getAdminStats();
       
-      // SUCCESS - They ARE an admin! Now show loading
+      // SUCCESS - Desktop admin user!
       setPageState('loading');
-      
-      // Brief loading animation
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Show dashboard
       setPageState('authorized');
       
     } catch (err: any) {
-      // NOT an admin (401/403) or other error
-      // Redirect and STAY in 404 waiting room
+      // NOT an admin - redirect
       router.push('/');
-      // Don't change pageState - keep showing 404
     }
   };
 
-  // Show 404 while validating OR while redirecting non-admins
+  // Mobile detection function
+  const checkIfMobile = (): boolean => {
+    // Method 1: User Agent detection
+    const userAgent = typeof window !== 'undefined' ? navigator.userAgent : '';
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+    
+    // Method 2: Screen size detection (catches tablets in phone mode)
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const isMobileScreen = screenWidth < 1024; // Below lg breakpoint
+    
+    // Method 3: Touch detection (catches touchscreen laptops, so use cautiously)
+    const isTouchDevice = typeof window !== 'undefined' && 
+      ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    
+    // COMBINE: Must match mobile pattern OR have small screen
+    // Touch alone isn't enough (touchscreen laptops exist)
+    return mobileRegex.test(userAgent) || isMobileScreen;
+  };
+
+  // Show 404 while validating OR while redirecting (mobile/non-admin/non-authenticated)
   if (pageState === 'validating') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -62,7 +85,7 @@ export default function AdminLayout({
     );
   }
 
-  // Show loading (ONLY for verified admins)
+  // Show loading (ONLY for verified desktop admins)
   if (pageState === 'loading') {
     return (
       <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
@@ -74,21 +97,19 @@ export default function AdminLayout({
     );
   }
 
-  // Show admin panel (ONLY for authorized admins)
-  return <div className="  bg-[#0a0e27] h-screen flex overflow-hidden">
-            {/* SIDEBAR COMPONENT - 60% width on mobile, slides in from left */}
-            <div className="
-              fixed lg:relative inset-y-0 left-0 z-50
-              transform transition-transform duration-300 ease-in-out
-              lg:translate-x-0
-              w-[60%] lg:w-auto
-            ">  
-            
-              <AdminSidebar/>
-            </div>
-    
-            {/* MAIN AREA - Right side */}  
-            <div className="flex-1 flex flex-col overflow-y-auto w-full">{children}</div>
-    
-    </div>;
+  // Show admin panel (ONLY for authorized desktop admins)
+  return (
+    <div className="bg-[#0a0e27] h-screen flex overflow-hidden">
+      <div className="
+        fixed lg:relative inset-y-0 left-0 z-50
+        transform transition-transform duration-300 ease-in-out
+        lg:translate-x-0
+        w-[60%] lg:w-auto
+      ">  
+        <AdminSidebar/>
+      </div>
+
+      <div className="flex-1 flex flex-col overflow-y-auto w-full">{children}</div>
+    </div>
+  );
 }
