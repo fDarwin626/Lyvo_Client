@@ -4,6 +4,7 @@ import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useRef } from "react"
+import Image from 'next/image'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -85,12 +86,14 @@ const About = () => {
     
     {/* Image with text overlay */}
     <div ref={containerRef} className="flex items-center justify-center relative">
-      <img 
+      <Image
         src="/images/photo3.jpg" 
-        className="w-[100%] h-[60%] mix-blend-lighten" 
         alt="agent photo"
-        loading="lazy"
-        decoding="async"
+        width={1920}
+        height={1080}
+        className="w-[100%] h-[60%] mix-blend-lighten"
+        quality={85}
+        sizes="100vw"
       />
       
       {/* DESKTOP CARDS - Hidden on mobile */}

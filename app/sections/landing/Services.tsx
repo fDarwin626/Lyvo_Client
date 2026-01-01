@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useRef, useMemo } from "react"
+import Image from 'next/image'
 
 const Services = () => {
   const servicesData = useMemo(() => [
@@ -30,21 +31,9 @@ const Services = () => {
   ], [])
 
   const [activeIndex, setActiveIndex] = useState(0)
-  const [imagesLoaded, setImagesLoaded] = useState<Record<number, boolean>>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const isUserInteracting = useRef(false)
-
-  // Preload images
-  useEffect(() => {
-    servicesData.forEach((service, index) => {
-      const img = new Image()
-      img.onload = () => {
-        setImagesLoaded(prev => ({ ...prev, [index]: true }))
-      }
-      img.src = service.image
-    })
-  }, [servicesData])
 
 // Auto-scroll functionality - OPTIMIZED
 useEffect(() => {
@@ -138,18 +127,13 @@ useEffect(() => {
                 
                 {/* BOTTOM HALF - IMAGE */}
                 <div className="h-1/2 relative bg-gray-200">
-                  {!imagesLoaded[index] && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                    </div>
-                  )}
-                  <img 
+                  <Image
                     src={service.image} 
                     alt={service.title}
-                    className={`w-full h-full object-cover transition-opacity duration-300
-                      ${imagesLoaded[index] ? 'opacity-100' : 'opacity-0'}`}
-                    loading="lazy"
-                    decoding="async"
+                    fill
+                    className="object-cover"
+                    quality={80}
+                    sizes="(max-width: 768px) 350px, 400px"
                   />
                 </div>
               </div>

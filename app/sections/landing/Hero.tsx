@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from 'next/image'
 
 const Hero = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [isLoaded, setIsLoaded] = useState<Record<string, boolean>>({});
-  const [allLoaded, setAllLoaded] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const sliders = [
@@ -18,65 +17,32 @@ const Hero = () => {
     {id: 6, image: '/images/audiobook.jpg', text:'Voice over for AudioBooks'},
   ];
 
-  // Preload images
   useEffect(() => {
-    const loadImage = (src: string) => {
-      return new Promise<void>((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          setIsLoaded(prev => ({ ...prev, [src]: true }));
-          resolve();
-        };
-        img.onerror = () => {
-          setIsLoaded(prev => ({ ...prev, [src]: true }));
-          resolve();
-        };
-        img.src = src;
+    const interval = setInterval(() => {
+      setCurrentIndex((current) => {
+        const nextIndex = current + direction;
+        
+        if (nextIndex >= sliders.length - 1) {
+          setDirection(-1);
+          return sliders.length - 1;
+        }
+        
+        if (nextIndex <= 0) {
+          setDirection(1);
+          return 0;
+        }
+        
+        return nextIndex;
       });
-    };
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [direction, sliders.length]);
 
-    Promise.all(sliders.map(slide => loadImage(slide.image)))
-      .then(() => setAllLoaded(true));
-  }, []);
-
-useEffect(() => {
-  if (!allLoaded) return;
-
-  const interval = setInterval(() => {
-    setCurrentIndex((current) => {
-      const nextIndex = current + direction;
-      
-      if (nextIndex >= sliders.length - 1) {
-        setDirection(-1);
-        return sliders.length - 1;
-      }
-      
-      if (nextIndex <= 0) {
-        setDirection(1);
-        return 0;
-      }
-      
-      return nextIndex;
-    });
-  }, 3000);
-  
-  return () => clearInterval(interval);
-}, [direction, sliders.length, allLoaded]);
   const handleDotClick = (index: number) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setCurrentIndex(index);
   };
-
-  if (!allLoaded) {
-    return (
-      <section className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="min-h-screen flex flex-col mt-4 overflow-hidden px-4">
@@ -102,13 +68,16 @@ useEffect(() => {
                 }}
               >
               <div className="relative">
-                <img
+                <Image
                   src={slide.image}
                   alt={slide.text}
+                  width={450}
+                  height={650}
                   className="w-[280px] h-[400px] md:w-[450px] 
                   md:h-[550px] lg:h-[650px] object-cover rounded-b-lg shadow-2xl"
-                  loading="eager"
-                  decoding="async"
+                  priority={index === 0}
+                  quality={80}
+                  sizes="(max-width: 768px) 280px, 450px"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 md:p-6 rounded-b-lg">
                   <h2 className="text-white text-lg md:text-2xl font-bold tracking-tight drop-shadow-lg">
