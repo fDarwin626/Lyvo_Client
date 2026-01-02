@@ -37,7 +37,7 @@ export default function SpeechToTextPage() {
     setError('');
     
     // Validate file type
-    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-m4a'];
+    const allowedTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a'];
     if (!allowedTypes.includes(file.type)) {
       setError('Invalid file type. Please upload an audio file (MP3, WAV, FLAC, OGG, M4A)');
       return;
