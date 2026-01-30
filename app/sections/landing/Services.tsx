@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import Image from 'next/image'
 import { gsap } from 'gsap'
 import { Icon } from "@iconify/react";
@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 const Services = () => {
   const router = useRouter();
 
-  const servicesData = [
+  const servicesData = useMemo(() => [
     {
       id: 0,
       title: "Text-to-Speech (TTS)",
@@ -37,10 +37,13 @@ const Services = () => {
       image: "/images/call.jpg",
       icon: <Icon icon="hugeicons:android" width="24" height="24" />,
     },
-  ]
+  ], [])
 
-  // Keep original 3x duplication (12 items)
-  const orbitItems = [...servicesData, ...servicesData, ...servicesData]
+  // Memoize orbit items to prevent recalculation
+  const orbitItems = useMemo(() => 
+    [...servicesData, ...servicesData, ...servicesData],
+    [servicesData]
+  )
 
   const [selectedService, setSelectedService] = useState<number | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -50,21 +53,41 @@ const Services = () => {
   const detailRef = useRef<HTMLDivElement>(null)
   const animationFrameRef = useRef<number | null>(null)
   const handRef = useRef<HTMLDivElement>(null)
+  const lastTimeRef = useRef(performance.now())
+  const isMobileRef = useRef(false)
 
-  // Optimized continuous rotation using requestAnimationFrame
+  // Check if mobile once and cache it
+  useEffect(() => {
+    isMobileRef.current = window.innerWidth < 768
+    
+    const handleResize = () => {
+      isMobileRef.current = window.innerWidth < 768
+    }
+    
+    window.addEventListener('resize', handleResize, { passive: true })
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Highly optimized continuous rotation using requestAnimationFrame
   useEffect(() => {
     if (selectedService !== null) return
 
-    let lastTime = performance.now()
     const rotationSpeed = 0.3
+    let frameCount = 0
 
     const animate = (currentTime: number) => {
-      const deltaTime = currentTime - lastTime
-      const fps = Math.max(1000 / deltaTime, 1)
-      const adjustedSpeed = rotationSpeed * (60 / fps)
+      frameCount++
       
-      setRotation(prev => (prev + adjustedSpeed) % 360)
-      lastTime = currentTime
+      // Only update rotation every frame for smooth 60fps
+      if (frameCount % 1 === 0) {
+        const deltaTime = currentTime - lastTimeRef.current
+        const fps = Math.max(1000 / deltaTime, 1)
+        const adjustedSpeed = rotationSpeed * (60 / fps)
+        
+        setRotation(prev => (prev + adjustedSpeed) % 360)
+        lastTimeRef.current = currentTime
+      }
+      
       animationFrameRef.current = requestAnimationFrame(animate)
     }
 
@@ -77,7 +100,7 @@ const Services = () => {
     }
   }, [selectedService])
 
-  // Animate hand on mount
+  // Animate hand on mount - optimized
   useEffect(() => {
     if (handRef.current) {
       gsap.fromTo(handRef.current,
@@ -91,13 +114,14 @@ const Services = () => {
           duration: 1.5,
           ease: "power3.out",
           delay: 0.5,
+          force3D: true,
         }
       )
     }
   }, [])
 
-  // Handle service selection with rocket animation
-  const handleServiceClick = (serviceId: number) => {
+  // Optimized service click handler
+  const handleServiceClick = useCallback((serviceId: number) => {
     if (isAnimating || selectedService !== null) return
     
     setIsAnimating(true)
@@ -143,12 +167,10 @@ const Services = () => {
         onComplete: () => setIsAnimating(false)
       })
     }
-  }
+  }, [isAnimating, selectedService, orbitItems])
 
-  // FIXED: Handle close properly
-  const handleClose = () => {
-    //if (isAnimating) return
-    
+  // Optimized close handler
+  const handleClose = useCallback(() => {
     setIsAnimating(true)
 
     if (detailRef.current) {
@@ -177,7 +199,25 @@ const Services = () => {
         force3D: true,
       })
     }
-  }
+  }, [])
+
+  // Memoize orbital calculations
+  const getOrbitalTransform = useCallback((index: number) => {
+    const angle = (360 / orbitItems.length) * index + rotation
+    const radian = (angle * Math.PI) / 180
+    
+    const radiusX = isMobileRef.current ? 160 : 280
+    const radiusY = isMobileRef.current ? 100 : 180
+    
+    const x = Math.cos(radian) * radiusX
+    const y = Math.sin(radian) * radiusY * 0.6
+    const z = Math.sin(radian) * radiusY
+    
+    const scale = 0.5 + (z + radiusY) / (radiusY * 2) * 0.7
+    const opacity = 0.3 + (z + radiusY) / (radiusY * 2) * 0.7
+
+    return { x, y, z, scale, opacity }
+  }, [rotation, orbitItems.length])
 
   return (
   <section className="relative min-h-screen py-20 pb-64 lg:py-50 lg:pb-96 overflow-hidden flex flex-col items-center justify-center">
@@ -202,10 +242,10 @@ const Services = () => {
 
       {/* 3D Orbital Container with Paper Fragments */}
       <div className="relative w-full max-w-[900px] h-[400px] lg:h-[550px] mb-16">
-        {/* Animated Hand - Normal on mobile, HUGE on desktop */}
+        {/* Animated Hand - Optimized with transform-gpu */}
         <div 
           ref={handRef}
-          className="absolute -bottom-80  left-0 w-full h-full pointer-events-none z-0
+          className="absolute -bottom-80 left-0 w-full h-full pointer-events-none z-0 transform-gpu
                      lg:-bottom-200 lg:-left-60 lg:w-[120%] lg:h-[120%]"
           style={{ 
             mixBlendMode: 'normal',
@@ -217,11 +257,14 @@ const Services = () => {
                 src="/images/hand.png"
                 alt="Hand"
                 fill
-                className="object-contain opacity-80 lg:opacity-80 scale-100 lg:scale-[1.3] "
+                className="object-contain opacity-80 lg:opacity-80 scale-100 lg:scale-[1.3]"
                 style={{
                   filter: 'brightness(1.1) contrast(0.9)',
                   mixBlendMode: 'normal',
                 }}
+                priority
+                quality={85}
+                sizes="(max-width: 768px) 600px, 1200px"
               />
             </div>
           </div>
@@ -229,34 +272,22 @@ const Services = () => {
 
         <div 
           ref={orbitRef}
-          className="absolute inset-0 flex items-center justify-center will-change-transform"
+          className="absolute inset-0 flex items-center justify-center will-change-transform transform-gpu"
           style={{ perspective: '1500px' }}
         >
           {orbitItems.map((service, index) => {
-            const angle = (360 / orbitItems.length) * index + rotation
-            const radian = (angle * Math.PI) / 180
-            
-            const radiusX = typeof window !== 'undefined' && window.innerWidth < 768 ? 160 : 280
-            const radiusY = typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : 180
-            
-            const x = Math.cos(radian) * radiusX
-            const y = Math.sin(radian) * radiusY * 0.6
-            const z = Math.sin(radian) * radiusY
-            
-            const scale = 0.5 + (z + radiusY) / (radiusY * 2) * 0.7
-            const opacity = 0.3 + (z + radiusY) / (radiusY * 2) * 0.7
-
+            const { x, y, z, scale, opacity } = getOrbitalTransform(index)
             const paperRotation = (index * 17) % 360
 
             return (
               <div
                 key={index}
                 ref={(el) => { itemsRef.current[index] = el }}
-                className="absolute cursor-pointer group will-change-transform"
+                className="absolute cursor-pointer group will-change-transform transform-gpu"
                 style={{
                   transform: `translate3d(${x}px, ${y}px, ${z}px) scale(${scale}) rotate(${paperRotation}deg)`,
                   opacity: opacity,
-                  zIndex: Math.floor(z + radiusY),
+                  zIndex: Math.floor(z + (isMobileRef.current ? 100 : 180)),
                   backfaceVisibility: 'hidden',
                 }}
                 onClick={() => handleServiceClick(service.id)}
@@ -274,12 +305,13 @@ const Services = () => {
                       fill
                       className="object-cover"
                       sizes="160px"
-                      quality={85}
+                      quality={80}
+                      loading={index < 4 ? "eager" : "lazy"}
                     />
                     
-                    <div className="absolute inset-0 bg-white/5 mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-white/5 mix-blend-overlay pointer-events-none" />
                     
-                    <div className="absolute inset-0 border-4 border-white/20 group-hover:border-white/50 transition-all" 
+                    <div className="absolute inset-0 border-4 border-white/20 group-hover:border-white/50 transition-all pointer-events-none" 
                       style={{
                         clipPath: 'polygon(15% 5%, 85% 10%, 95% 40%, 90% 85%, 50% 95%, 10% 80%, 5% 35%)',
                       }}
@@ -292,7 +324,7 @@ const Services = () => {
                 </div>
 
                 <div 
-                  className="absolute inset-0 -z-10 bg-black/30 blur-md"
+                  className="absolute inset-0 -z-10 bg-black/30 blur-md pointer-events-none"
                   style={{
                     clipPath: 'polygon(15% 5%, 85% 10%, 95% 40%, 90% 85%, 50% 95%, 10% 80%, 5% 35%)',
                     transform: 'translate(4px, 4px)',
@@ -310,98 +342,46 @@ const Services = () => {
                 alt="Earth guide"
                 fill
                 className="object-contain opacity-80"
+                sizes="(max-width: 768px) 96px, 224px"
+                quality={85}
+                priority
               />
             </div>
           </div>
       </div>
       </div>
 
-      {/* Service Selection Buttons - Glassy White, 2x2 Grid on Mobile */}
+      {/* Service Selection Buttons - Optimized with useCallback */}
       <div className="grid grid-cols-2 gap-3 px-4 z-10 mb-8 max-w-4xl w-full lg:flex lg:flex-wrap lg:justify-center">
-        <button
-          onClick={() => handleServiceClick(0)}
-          disabled={isAnimating || selectedService !== null}
-          className="group relative px-4 py-2.5 lg:px-6 lg:py-3 rounded-full 
-          bg-black/20 backdrop-blur-md border border-black/40 
-          text-black shadow-lg
-          hover:bg-white/30 hover:border-white/60 hover:shadow-xl
-          transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 100%)',
-          }}
-        >
-          <div className="flex items-center gap-2 justify-center">
-            <span className="text-base lg:text-xl">{servicesData[0].icon}</span>
-            <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{servicesData[0].title}</span>
-          </div>
-          <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 
-          transition-opacity blur-xl -z-10" />
-        </button>
-
-        <button
-          onClick={() => handleServiceClick(1)}
-          disabled={isAnimating || selectedService !== null}
-          className="group relative px-4 py-2.5 lg:px-6 lg:py-3 rounded-full 
-          bg-white/20 backdrop-blur-md border border-black/40 
-          text-black shadow-lg
-          hover:bg-white/30 hover:border-white/60 hover:shadow-xl
-          transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 100%)',
-          }}
-        >
-          <div className="flex items-center gap-2 justify-center">
-            <span className="text-base lg:text-xl">{servicesData[1].icon}</span>
-            <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{servicesData[1].title}</span>
-          </div>
-          <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity blur-xl -z-10" />
-        </button>
-
-        <button
-          onClick={() => handleServiceClick(2)}
-          disabled={isAnimating || selectedService !== null}
-          className="group relative px-4 py-2.5 lg:px-6 lg:py-3 rounded-full 
-          bg-white/20 backdrop-blur-md border border-black/40 
-          text-black shadow-lg
-          hover:bg-white/30 hover:border-white/60 hover:shadow-xl
-          transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 100%)',
-          }}
-        >
-          <div className="flex items-center gap-2 justify-center">
-            <span className="text-base lg:text-xl">{servicesData[2].icon}</span>
-            <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{servicesData[2].title}</span>
-          </div>
-          <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 
-          group-hover:opacity-100 transition-opacity blur-xl -z-10" />
-        </button>
-
-        <button
-          onClick={() => handleServiceClick(3)}
-          disabled={isAnimating || selectedService !== null}
-          className="group relative px-4 py-2.5 lg:px-6 lg:py-3 rounded-full 
-          bg-white/20 backdrop-blur-md border border-black/40
-          text-black shadow-lg
-          hover:bg-white/30 hover:border-white/60 hover:shadow-xl
-          transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 100%)',
-          }}
-        >
-          <div className="flex items-center gap-2 justify-center">
-            <span className="text-base lg:text-xl">{servicesData[3].icon}</span>
-            <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{servicesData[3].title}</span>
-          </div>
-          <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity blur-xl -z-10" />
-        </button>
+        {servicesData.map((service, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleServiceClick(idx)}
+            disabled={isAnimating || selectedService !== null}
+            className="group relative px-4 py-2.5 lg:px-6 lg:py-3 rounded-full 
+            bg-black/20 backdrop-blur-md border border-black/40 
+            text-black shadow-lg
+            hover:bg-white/30 hover:border-white/60 hover:shadow-xl
+            transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.2) 100%)',
+            }}
+          >
+            <div className="flex items-center gap-2 justify-center">
+              <span className="text-base lg:text-xl">{service.icon}</span>
+              <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{service.title}</span>
+            </div>
+            <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 
+            transition-opacity blur-xl -z-10 pointer-events-none" />
+          </button>
+        ))}
       </div>
 
-      {/* Detail View - FIXED X BUTTON & TEXT VISIBILITY */}
+      {/* Detail View - Optimized */}
       {selectedService !== null && (
         <div 
           ref={detailRef}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 will-change-transform"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 will-change-transform transform-gpu"
           style={{ 
             perspective: '1500px',
             transformStyle: 'preserve-3d'
@@ -416,14 +396,13 @@ const Services = () => {
           {/* Content Card */}
           <div className="relative max-w-4xl w-full bg-gradient-to-br from-white/10 to-white/5 rounded-3xl overflow-hidden border border-white/20 shadow-2xl">
             
-            {/* FIXED Close Button - with proper event handling */}
+            {/* Close Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 handleClose()
               }}
-             // disabled={isAnimating}
-              className="absolute top-4 right-4 lg:top-6 lg:right-6 z-50 w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-black/80 backdrop-blur-md border-2 border-white/40 flex items-center justify-center hover:bg-red-600 hover:border-red-400 hover:scale-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
+              className="absolute top-4 right-4 lg:top-6 lg:right-6 z-50 w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-black/80 backdrop-blur-md border-2 border-white/40 flex items-center justify-center hover:bg-red-600 hover:border-red-400 hover:scale-110 transition-all shadow-xl active:scale-95"
               aria-label="Close"
             >
               <svg className="w-6 h-6 lg:w-7 lg:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -443,18 +422,17 @@ const Services = () => {
                   quality={90}
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/70 via-black/40 to-transparent pointer-events-none" />
                 
                 {/* Icon Badge */}
                 <div className="absolute top-6 left-6">
-                  <div className="w-16 h-16 lg:w-20 lg:h-20
-                   flex items-center justify-center text-3xl lg:text-4xl ">
+                  <div className="w-16 h-16 lg:w-20 lg:h-20 flex items-center justify-center text-3xl lg:text-4xl">
                     {servicesData[selectedService].icon}
                   </div>
                 </div>
               </div>
 
-              {/* Right: Content - IMPROVED TEXT VISIBILITY */}
+              {/* Right: Content */}
               <div className="p-8 lg:p-12 flex flex-col justify-center bg-black/40 backdrop-blur-sm">
                 <h2 className="text-3xl lg:text-5xl font-black mb-6 leading-tight text-white drop-shadow-lg">
                   {servicesData[selectedService].title}
@@ -466,15 +444,15 @@ const Services = () => {
 
                 {/* Action Button */}
                 <button 
-               onClick={() => router.push('/documentation')}
-                className="group relative px-8 py-4 rounded-full bg-white text-black font-semibold overflow-hidden transition-all hover:scale-105 hover:shadow-2xl">
+                  onClick={() => router.push('/documentation')}
+                  className="group relative px-8 py-4 rounded-full bg-white text-black font-semibold overflow-hidden transition-all hover:scale-105 hover:shadow-2xl active:scale-95">
                   <span className="relative z-10 flex items-center gap-2 justify-center">
                     Learn More
                     <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-white transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-white transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300 pointer-events-none" />
                 </button>
               </div>
             </div>

@@ -5,14 +5,14 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useRef } from "react"
 import Image from 'next/image'
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation"
 
 gsap.registerPlugin(ScrollTrigger)
 
 const About = () => {
     const text = `Deliver new experiences and save costs for your enterprise
     Build the most advanced audio models into your product with our Agents`
-const router = useRouter();
+const router = useRouter()
 
     const heroImageRef = useRef<HTMLDivElement>(null)
     const featureCardsRef = useRef<(HTMLDivElement | null)[]>([])
@@ -39,85 +39,102 @@ const router = useRouter();
 
     useGSAP(() => {
       const ctx = gsap.context(() => {
-        // Hero image parallax effect
+        // Optimized ScrollTrigger defaults
+        ScrollTrigger.config({
+          limitCallbacks: true,
+          syncInterval: 150, // Reduced from default for better performance
+        })
+
+        // Hero image parallax effect - optimized
         if (heroImageRef.current) {
           gsap.to(heroImageRef.current, {
             yPercent: 20,
             ease: "none",
+            force3D: true, // Hardware acceleration
             scrollTrigger: {
               trigger: heroImageRef.current,
               start: "top bottom",
               end: "bottom top",
               scrub: 1,
               fastScrollEnd: true,
+              invalidateOnRefresh: true,
+              anticipatePin: 1,
             }
           })
         }
 
-        // Staggered card animations
-        featureCardsRef.current.forEach((card) => {
-          if (card) {
-            gsap.fromTo(
-              card,
-              {
+        // Optimized staggered card animations with batch processing
+        const validCards = featureCardsRef.current.filter(card => card !== null)
+        
+        if (validCards.length > 0) {
+          // Use ScrollTrigger.batch for better performance
+          ScrollTrigger.batch(validCards, {
+            onEnter: (elements) => {
+              gsap.fromTo(
+                elements,
+                {
+                  y: 80,
+                  opacity: 0,
+                },
+                {
+                  y: 0,
+                  opacity: 1,
+                  duration: 0.9,
+                  ease: "power3.out",
+                  stagger: 0.1,
+                  force3D: true,
+                  overwrite: 'auto',
+                }
+              )
+            },
+            onLeaveBack: (elements) => {
+              gsap.to(elements, {
                 y: 80,
                 opacity: 0,
-                willChange: 'transform, opacity'
-              },
-              {
-                y: 0,
-                opacity: 1,
-                duration: 0.9,
-                ease: "power3.out",
-                scrollTrigger: {
-                  trigger: card,
-                  start: "top 85%",
-                  end: "top 60%",
-                  toggleActions: "play none none reverse",
-                  fastScrollEnd: true,
-                  preventOverlaps: true,
-                },
-                onComplete: () => {
-                  gsap.set(card, { clearProps: 'willChange' })
-                }
-              }
-            )
-          }
-        })
+                duration: 0.5,
+                stagger: 0.05,
+                overwrite: 'auto',
+              })
+            },
+            start: "top 85%",
+            end: "top 60%",
+            fastScrollEnd: true,
+          })
+        }
 
-        // CTA section animation
+        // CTA section animation - optimized
         if (ctaRef.current) {
           gsap.fromTo(
             ctaRef.current,
             {
               y: 60,
               opacity: 0,
-              willChange: 'transform, opacity'
             },
             {
               y: 0,
               opacity: 1,
               duration: 0.8,
               ease: "power2.out",
+              force3D: true,
               scrollTrigger: {
                 trigger: ctaRef.current,
                 start: "top 85%",
                 fastScrollEnd: true,
                 once: true,
               },
-              onComplete: () => {
-                gsap.set(ctaRef.current, { clearProps: 'willChange' })
-              }
             }
           )
         }
       }, containerRef)
 
-      return () => ctx.revert()
-    }, { scope: containerRef })
+      return () => {
+        ctx.revert()
+        ScrollTrigger.clearScrollMemory()
+      }
+    }, { scope: containerRef, dependencies: [] })
 
   return (
-  <section ref={containerRef} className="min-h-screen bg-black mt-20 lg:mt-30 rounded-t-[3rem] lg:rounded-t-[4rem] rounded-b-[3rem] lg:rounded-b-[4rem] overflow-hidden">
+  <section ref={containerRef} className="min-h-screen bg-black mt-20 lg:mt-30 rounded-t-[3rem] lg:rounded-t-[4rem] rounded-b-[3rem] lg:rounded-b-[4rem] overflow-hidden will-change-transform">
     
     {/* Header Section */}
     <AnimatedHeaderSection
@@ -145,7 +162,7 @@ const router = useRouter();
     {/* Hero Image Section with Parallax */}
     <div className="relative w-full overflow-hidden px-6 lg:px-16 mb-20 lg:mb-32">
       <div className="max-w-7xl mx-auto">
-        <div ref={heroImageRef} className="relative h-[400px] lg:h-[600px] rounded-2xl lg:rounded-3xl overflow-hidden">
+        <div ref={heroImageRef} className="relative h-[400px] lg:h-[600px] rounded-2xl lg:rounded-3xl overflow-hidden transform-gpu">
           <Image
             src="/images/photo3.jpg" 
             alt="AI Agent visualization"
@@ -154,8 +171,11 @@ const router = useRouter();
             quality={90}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
             priority
+            loading="eager"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA2gA8/9k="
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none" />
           
           <div className="absolute top-6 left-6 lg:top-8 lg:left-8">
             <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 lg:px-6 lg:py-3">
@@ -174,12 +194,12 @@ const router = useRouter();
             <div
               key={index}
               ref={(el) => { featureCardsRef.current[index] = el }}
-              className="group relative"
+              className="group relative transform-gpu"
             >
               <div className="relative bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl lg:rounded-3xl p-8 lg:p-12 overflow-hidden transition-all duration-500 hover:bg-white/[0.05] hover:border-white/20">
                 
                 {/* Subtle glow effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 </div>
 
@@ -222,17 +242,17 @@ const router = useRouter();
     {/* Bottom CTA Section - Refined Design */}
     <div className="px-6 lg:px-16 pb-16 lg:pb-24">
       <div className="max-w-7xl mx-auto">
-        <div ref={ctaRef} className="relative">
+        <div ref={ctaRef} className="relative transform-gpu">
           {/* Main CTA Container */}
           <div className="relative bg-white/[0.02] backdrop-blur-sm border-t border-white/10 rounded-3xl lg:rounded-[3rem] overflow-hidden">
             
             {/* Top accent line */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
 
             <div className="relative px-8 lg:px-16 py-12 lg:py-20">
               
               {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-[0.02]">
+              <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
                 <div className="absolute inset-0" style={{
                   backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
                   backgroundSize: '40px 40px'
@@ -257,7 +277,7 @@ const router = useRouter();
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button 
                    onClick={() => router.push('/auth/signup')}
-                  className="group relative px-8 py-4 bg-white text-black font-semibold rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-white/10 w-full sm:w-auto">
+                  className="group relative px-8 py-4 bg-white text-black font-semibold rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-white/10 w-full sm:w-auto active:scale-95">
                     <span className="relative z-10 flex items-center gap-2 justify-center">
                       Get Started
                       <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,7 +288,7 @@ const router = useRouter();
 
                   <button
                   onClick={() => router.push('/documentation')}
-                  className="group px-8 py-4 bg-white/5 backdrop-blur-sm text-white font-semibold rounded-full border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all w-full sm:w-auto">
+                  className="group px-8 py-4 bg-white/5 backdrop-blur-sm text-white font-semibold rounded-full border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all w-full sm:w-auto active:scale-95">
                     <span className="flex items-center gap-2 justify-center">
                       View Documentation
                       <svg className="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
