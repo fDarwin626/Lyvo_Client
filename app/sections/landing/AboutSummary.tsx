@@ -3,6 +3,7 @@ import Marquee from "@/components/Marquee"
 import { useRouter } from "next/navigation"
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 // Lazy load RippleGrid with no SSR
 const RippleGrid = dynamic(() => import('@/components/RippleGrid'), {
@@ -16,13 +17,6 @@ const AboutSummary = () => {
   const [isMobile, setIsMobile] = useState(false);
   const rippleRef = useRef<HTMLDivElement>(null);
 
-  const item = [
-    `Innovation`,
-    `Automation`,
-    `Voice Cloning`,
-    `Story Telling`,
-    `Audio Book`,
-  ]
 
   // Check if mobile on mount
   useEffect(() => {
@@ -57,12 +51,6 @@ const AboutSummary = () => {
 
   return (
     <section className="min-h-screen mt-20 flex-col items-center text-center justify-between">
-      <Marquee
-        items={item}
-        className="text-black bg-transparent !text-xl font-amiamie-round"
-        icon="simple-icons:creativetechnology"
-        IconclassName="w-24 h-23 text-gold"
-      />
 
       <div className="flex flex-col items-center justify-center mt-20">
         <h1 className="lg:text-5xl text-3xl font-amiamie font-medium">
@@ -75,30 +63,40 @@ const AboutSummary = () => {
         </p>
       </div>
 
-      <div ref={rippleRef} className="relative w-full h-[500px] mt-10">
+      <div className="relative w-full h-[500px] mt-20">
         {/* RippleGrid Background */}
-        <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+        <div ref={rippleRef} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
           <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
-            {showRipple ? (
-              <RippleGrid
-                enableRainbow={false}
-                gridColor="#3b82f6"
-                rippleIntensity={0.05}
-                gridSize={10}
-                gridThickness={15}
-                mouseInteraction={!isMobile} // Disable on mobile
-                mouseInteractionRadius={1.2}
-                opacity={0.8}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100" />
+                 <RippleGrid
+            enableRainbow={false}
+            gridColor="#3b82f6"
+            rippleIntensity={0.05}
+            gridSize={10}
+            gridThickness={15}
+            mouseInteraction={true}
+            mouseInteractionRadius={1.2}
+            opacity={0.8}
+          />
+            
+            <Image
+              src="/images/wave.png"
+              alt="Background"
+              fill
+              className="object-cover object-center lg:opacity-30 -mt-20 "
+              priority
+            />
+            {showRipple && (
+              <div ref={rippleRef} className="absolute inset-0">
+                <RippleGrid />
+              </div>
             )}
           </div>
         </div>
 
         {/* Content Overlay */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full px-4">
-          <h1 className="text-2xl md:text-6xl lg:font-light font-semibold text-gray-950 text-center mb-8 font-amiamie">
+          <h1 className="text-2xl md:text-6xl lg:font-semibold 
+           text-gray-950 text-center mb-8 font-amiamie font-bold">
             Experience our full audio platform,<br />
             Get Started today
           </h1>

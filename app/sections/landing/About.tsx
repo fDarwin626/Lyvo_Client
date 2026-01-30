@@ -5,142 +5,283 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useRef } from "react"
 import Image from 'next/image'
+import { useRouter } from "next/navigation";
 
 gsap.registerPlugin(ScrollTrigger)
 
 const About = () => {
     const text = `Deliver new experiences and save costs for your enterprise
     Build the most advanced audio models into your product with our Agents`
+const router = useRouter();
 
-    const card1Ref = useRef<HTMLDivElement>(null)
-    const card2Ref = useRef<HTMLDivElement>(null)
-    const card3Ref = useRef<HTMLDivElement>(null)
-    const mobileTextRef = useRef<HTMLDivElement>(null)
+    const heroImageRef = useRef<HTMLDivElement>(null)
+    const featureCardsRef = useRef<(HTMLDivElement | null)[]>([])
     const containerRef = useRef<HTMLDivElement>(null)
+    const ctaRef = useRef<HTMLDivElement>(null)
+
+    const features = [
+      {
+        title: "Crafting Agents",
+        description: "Create an AI agent with a single prompt, using Lyvo's advanced generation technology",
+        number: "01"
+      },
+      {
+        title: "Select Voices",
+        description: "Pick a unique voice that suits your agent character from numerous voices on our voice library",
+        number: "02"
+      },
+      {
+        title: "Share with Others",
+        description: "Create shareable links. Share with friends, teams or co-workers instantly",
+        number: "03"
+      }
+    ]
 
     useGSAP(() => {
-      // Use single timeline for better performance
       const ctx = gsap.context(() => {
-        // Batch animations for better performance
-        const cards = [
-          { ref: card1Ref, x: -100 },
-          { ref: card2Ref, x: 100 },
-          { ref: card3Ref, x: -100 },
-          { ref: mobileTextRef, x: -100 }
-        ]
+        // Hero image parallax effect
+        if (heroImageRef.current) {
+          gsap.to(heroImageRef.current, {
+            yPercent: 20,
+            ease: "none",
+            scrollTrigger: {
+              trigger: heroImageRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1,
+              fastScrollEnd: true,
+            }
+          })
+        }
 
-        cards.forEach(({ ref, x }) => {
-          if (ref.current) {
+        // Staggered card animations
+        featureCardsRef.current.forEach((card) => {
+          if (card) {
             gsap.fromTo(
-              ref.current,
+              card,
               {
-                x,
+                y: 80,
                 opacity: 0,
                 willChange: 'transform, opacity'
               },
               {
-                x: 0,
+                y: 0,
                 opacity: 1,
-                duration: 0.8,
-                ease: "power2.out",
+                duration: 0.9,
+                ease: "power3.out",
                 scrollTrigger: {
-                  trigger: ref.current,
-                  start: "top 80%",
-                  end: "top 50%",
+                  trigger: card,
+                  start: "top 85%",
+                  end: "top 60%",
                   toggleActions: "play none none reverse",
-                  // Performance optimization
                   fastScrollEnd: true,
                   preventOverlaps: true,
                 },
                 onComplete: () => {
-                  // Remove will-change after animation completes
-                  if (ref.current) {
-                    gsap.set(ref.current, { clearProps: 'willChange' })
-                  }
+                  gsap.set(card, { clearProps: 'willChange' })
                 }
               }
             )
           }
         })
+
+        // CTA section animation
+        if (ctaRef.current) {
+          gsap.fromTo(
+            ctaRef.current,
+            {
+              y: 60,
+              opacity: 0,
+              willChange: 'transform, opacity'
+            },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.8,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: ctaRef.current,
+                start: "top 85%",
+                fastScrollEnd: true,
+                once: true,
+              },
+              onComplete: () => {
+                gsap.set(ctaRef.current, { clearProps: 'willChange' })
+              }
+            }
+          )
+        }
       }, containerRef)
 
-      return () => ctx.revert() // Cleanup all animations
-    }, { scope: containerRef, dependencies: [] })
+      return () => ctx.revert()
+    }, { scope: containerRef })
 
   return (
-  <section className="min-h-screen bg-black mt-30 rounded-t-4xl sticky rounded-b-4xl">
+  <section ref={containerRef} className="min-h-screen bg-black mt-20 lg:mt-30 rounded-t-[3rem] lg:rounded-t-[4rem] rounded-b-[3rem] lg:rounded-b-[4rem] overflow-hidden">
+    
+    {/* Header Section */}
     <AnimatedHeaderSection
-      subtitle= "Next Gen, Ai Voice Platform"
+      subtitle="Next Gen, AI Voice Platform"
       title='Agents'
       text={text}
       textcolor='text-white'
       withScrollTrigger={true}
     />
-    <div className="items-center justify-center mb-10">
-      <div className="min-w-screen border flex flex-row mb-3"/>
-        <div className="flex flex-col text-2xl lg:text-4xl text-gray-200 p-4">
-            <h1 className="mb-5 font-amiamie font-normal">Lyvo Ai Agent</h1>
-            <p className="text-sm lg:text-xl">Own a personal Ai agents accessable anytime. share links with friends and co-workers</p>
+
+    {/* Title Section */}
+    <div className="px-6 lg:px-16 py-12 lg:py-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="border-t border-white/10 pt-8 lg:pt-12">
+          <h2 className="text-3xl lg:text-6xl font-bold text-white mb-4 font-amiamie">
+            Lyvo AI Agent
+          </h2>
+          <p className="text-base lg:text-xl text-gray-400 max-w-2xl">
+            Own a personal AI agents accessible anytime. Share links with friends and co-workers
+          </p>
         </div>
+      </div>
     </div>
     
-    {/* Image with text overlay */}
-    <div ref={containerRef} className="flex items-center justify-center relative">
-      <Image
-        src="/images/photo3.jpg" 
-        alt="agent photo"
-        width={1920}
-        height={1080}
-        className="w-[100%] h-[60%] mix-blend-lighten"
-        quality={85}
-        sizes="100vw"
-      />
-      
-      {/* DESKTOP CARDS - Hidden on mobile */}
-      <div ref={card1Ref} className="hidden md:block absolute left-8 md:left-16 lg:left-17 top-1/4 -translate-y-1/2 max-w-md">
-        <div className="border-2 border-red-500 p-6 bg-black/50 backdrop-blur-sm rounded-2xl">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-yellow-400 tracking-wider font-amiamie">
-           Crafting agents 
-          </h2>
-          <p className="text-gray-200 mt-4 text-sm md:text-base font-serif">
-            Create an ai agent with a single prompt, using lyvo
-          </p>
+    {/* Hero Image Section with Parallax */}
+    <div className="relative w-full overflow-hidden px-6 lg:px-16 mb-20 lg:mb-32">
+      <div className="max-w-7xl mx-auto">
+        <div ref={heroImageRef} className="relative h-[400px] lg:h-[600px] rounded-2xl lg:rounded-3xl overflow-hidden">
+          <Image
+            src="/images/photo3.jpg" 
+            alt="AI Agent visualization"
+            fill
+            className="object-cover"
+            quality={90}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          
+          <div className="absolute top-6 left-6 lg:top-8 lg:left-8">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2 lg:px-6 lg:py-3">
+              <span className="text-white text-xs lg:text-sm font-semibold">AI-Powered</span>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div ref={card2Ref} className="hidden md:block absolute right-8 md:right-16 lg:right-17 top-1/2 -translate-y-1/2 max-w-md">
-        <div className="border-2 border-red-500 p-6 bg-black/50 backdrop-blur-sm rounded-2xl">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-yellow-400 tracking-wider font-amiamie">
-           Select Voices
-          </h2>
-          <p className="text-gray-200 mt-4 text-sm md:text-base font-serif">
-            Pick a unique voice that suits your agent character from numerious voices on our voice library
-          </p>
+    {/* Feature Cards - Minimalist Design */}
+    <div className="px-6 lg:px-16 pb-24 lg:pb-32">
+      <div className="max-w-7xl mx-auto">
+        <div className="space-y-6 lg:space-y-8">
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              ref={(el) => { featureCardsRef.current[index] = el }}
+              className="group relative"
+            >
+              <div className="relative bg-white/[0.03] backdrop-blur-sm border border-white/10 rounded-2xl lg:rounded-3xl p-8 lg:p-12 overflow-hidden transition-all duration-500 hover:bg-white/[0.05] hover:border-white/20">
+                
+                {/* Subtle glow effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                </div>
+
+                <div className="relative flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-12">
+                  {/* Number Badge */}
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors duration-300">
+                      <span className="text-2xl lg:text-3xl font-bold text-white/60 group-hover:text-white/90 transition-colors duration-300">
+                        {feature.number}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1">
+                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3 lg:mb-4 font-amiamie">
+                      {feature.title}
+                    </h3>
+                    <p className="text-base lg:text-lg text-gray-400 leading-relaxed max-w-3xl">
+                      {feature.description}
+                    </p>
+                  </div>
+
+                  {/* Decorative arrow */}
+                  <div className="flex-shrink-0 hidden lg:block">
+                    <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-2">
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
 
-      <div ref={card3Ref} className="hidden md:block absolute left-8
-       md:left-16 lg:left-17 top-300 -translate-y-1/2 max-w-md">
-        <div className="border-2 border-red-500 p-6 bg-black/50 backdrop-blur-sm rounded-2xl">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-yellow-400 tracking-wider font-amiamie">
-           Share with others
-          </h2>
-          <p className="text-gray-200 mt-4 text-sm md:text-base font-serif">
-            Create shareable links. share with friends, teams or co-workers.
-          </p>
+    {/* Bottom CTA Section - Refined Design */}
+    <div className="px-6 lg:px-16 pb-16 lg:pb-24">
+      <div className="max-w-7xl mx-auto">
+        <div ref={ctaRef} className="relative">
+          {/* Main CTA Container */}
+          <div className="relative bg-white/[0.02] backdrop-blur-sm border-t border-white/10 rounded-3xl lg:rounded-[3rem] overflow-hidden">
+            
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+            <div className="relative px-8 lg:px-16 py-12 lg:py-20">
+              
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-[0.02]">
+                <div className="absolute inset-0" style={{
+                  backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                  backgroundSize: '40px 40px'
+                }} />
+              </div>
+
+              <div className="relative text-center max-w-3xl mx-auto">
+                <div className="mb-6">
+                  <span className="inline-block px-4 py-2 rounded-full border border-white/20 text-xs lg:text-sm text-white/70 backdrop-blur-sm">
+                    Start Building Today
+                  </span>
+                </div>
+
+                <h3 className="text-3xl lg:text-5xl font-bold text-white mb-4 lg:mb-6 font-amiamie leading-tight">
+                  Ready to Create Your Agent?
+                </h3>
+                
+                <p className="text-base lg:text-lg text-gray-400 mb-10 lg:mb-12">
+                  Join thousands of users already building with Lyvo AI
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button 
+                   onClick={() => router.push('/auth/signup')}
+                  className="group relative px-8 py-4 bg-white text-black font-semibold rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-white/10 w-full sm:w-auto">
+                    <span className="relative z-10 flex items-center gap-2 justify-center">
+                      Get Started
+                      <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
+                    </span>
+                  </button>
+
+                  <button
+                  onClick={() => router.push('/documentation')}
+                  className="group px-8 py-4 bg-white/5 backdrop-blur-sm text-white font-semibold rounded-full border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all w-full sm:w-auto">
+                    <span className="flex items-center gap-2 justify-center">
+                      View Documentation
+                      <svg className="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* MOBILE TEXT ONLY - No cards, just plain text */}
-      <div ref={mobileTextRef} className="md:hidden absolute left-4 top-75 -translate-y-1/2 max-w-xs">
-        <h2 className="text-2xl font-semibold text-yellow-400 tracking-wider font-amiamie mb-2">
-          Crafting agents
-        </h2>
-        <p className="text-gray-200 text-sm font-serif">
-          Create an ai agent with a single prompt, using lyvo
-        </p>
-      </div>
-
     </div>
 
   </section>

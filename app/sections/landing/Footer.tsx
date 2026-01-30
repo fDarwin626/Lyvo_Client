@@ -5,9 +5,11 @@ import Link from 'next/link';
 
 const Footer = () => {
   const router = useRouter();
+  const currentYear = new Date().getFullYear();
+  
   return (
 
-    <section className="min-h-screen mt-50">
+    <section className="min-h-screen mt-70">
         <div className="relative w-full h-[500px] mt-10">
      <RippleGrid
       enableRainbow={false}
@@ -22,13 +24,9 @@ const Footer = () => {
         <div className="absolute inset-0 flex items-center justify-center p-4">
           <div className="backdrop-blur-md  bg-white/10 border border-white/20 
           rounded-3xl p-8 max-w-md w-full shadow-2xl">
-            {/* Pause button */}
+            {/* Logo */}
             <div className="flex justify-center mb-25">
-              <button className="bg-white rounded-2xl p-4 shadow-lg hover:scale-105 transition-transform">
-                <div className="flex gap-1">
-                  <p className="font-amiamie font-semibold">L.v</p>
-                </div>
-              </button>
+              <img src="/images/hero/Icon.png" alt="lyvo logo"  className="w-30 h-20 object-contain"/>
             </div>
             
             {/* Heading */}
@@ -60,15 +58,15 @@ const Footer = () => {
     {/* Left side - Brand and Copyright */}
     <div className="flex items-center gap-8">
       <h3 className="text-xl font-bold">LYVO</h3>
-      <p className="text-sm text-gray-600">© 2025 CoCoNuTStudios</p>
+      <p className="text-sm text-gray-600">© {currentYear} CoCoNuTStudios</p>
     </div>
     
     {/* Right side - Links */}
     <div className="flex gap-6 text-sm">
-      <a href="#" className="text-gray-600 hover:text-black transition-colors">Privacy</a>
-      <a href="#" className="text-gray-600 hover:text-black transition-colors">Terms</a>
-      <a href="#" className="text-gray-600 hover:text-black transition-colors">Safety</a>
-      <a href="#" className="text-gray-600 hover:text-black transition-colors">Modify cookies</a>
+      <a href="/" className="text-gray-600 hover:text-black transition-colors">Privacy</a>
+      <a href="/" className="text-gray-600 hover:text-black transition-colors">Terms</a>
+      <a href="/" className="text-gray-600 hover:text-black transition-colors">Safety</a>
+      <a href="/" className="text-gray-600 hover:text-black transition-colors">Modify cookies</a>
     </div>
   </div>
 </footer>

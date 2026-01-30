@@ -7,7 +7,7 @@ import gsap from 'gsap';
 import { Loader2 } from 'lucide-react';
 import { useCreditBalance } from '@/app/contexts/CreditContext';
 import { getUnreadNotificationCount, isAuthenticated } from '@/lib/api';
-
+import Image from 'next/image';
 
 interface SidebarProps {
   onCloseMobile?: () => void;
@@ -161,10 +161,13 @@ return (
       {/* Logo Text - hide when collapsed */}
       {!isCollapsed && (
         <div className="flex items-center gap-2">
-          <h1 ref={logoRef}
-            className="text-2xl font-bold" style={{ fontFamily: 'Cal Sans, sans-serif' }}>
-            Lyvo
-          </h1>
+          <Image
+           ref={logoRef}
+            src="/images/hero/Icon.png"
+            alt="Lyvo Logo"
+            width={30}
+            height={20}
+          />
           {/* Premium badge - show crown for tier 2 users */}
           {planTier === 2 && (
             <Icon 
