@@ -83,7 +83,7 @@ const AboutSummary = () => {
                 src="/images/wave.png"
                 alt="Background wave"
                 fill
-                className="object-cover object-center opacity-70 pointer-events-none"
+                className="object-cover object-center opacity-70 pointer-events-none -mt-25"
                 priority
                 loading="eager"
                 quality={75}
