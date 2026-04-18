@@ -76,9 +76,18 @@ export default function DocumentationPage() {
         v.currentTime = v.duration - 0.01;
       }
     };
+
+    const isMobile = window.innerWidth < 768;
+
     v.addEventListener('loadedmetadata', seekToEnd, { once: true });
+    if (isMobile) v.addEventListener('loadeddata', seekToEnd, { once: true });
+
     v.load();
-    return () => v.removeEventListener('loadedmetadata', seekToEnd);
+
+    return () => {
+      v.removeEventListener('loadedmetadata', seekToEnd);
+      if (isMobile) v.removeEventListener('loadeddata', seekToEnd);
+    };
   }, []);
 
   const handleEnded = useCallback(() => setIsPlaying(false), []);
@@ -380,7 +389,7 @@ export default function DocumentationPage() {
               <video
                 ref={videoRef}
                 className="absolute inset-0 w-full h-full object-contain"
-                preload="auto"
+                preload={typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : 'metadata'}
                 playsInline
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}

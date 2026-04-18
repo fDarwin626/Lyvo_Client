@@ -54,18 +54,28 @@ const AboutSummary = () => {
     return () => ctx.revert()
   }, { scope: sectionRef })
 
-// ── setup video to show poster frame without needing a separate image file ──
- useEffect(() => {
-  const vid = videoRef.current;
-  if (!vid) return;
-      const seekToEnd = () => {
-        if (vid.duration && isFinite(vid.duration)) {
-          vid.currentTime = vid.duration - 0.01;
-        }
-      };
-      vid.addEventListener('loadedmetadata', seekToEnd, { once: true });
-      vid.load();
-      return () => vid.removeEventListener('loadedmetadata', seekToEnd);
+  // ── setup video to show poster frame without needing a separate image file ──
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    const seekToEnd = () => {
+      if (vid.duration && isFinite(vid.duration)) {
+        vid.currentTime = vid.duration - 0.01;
+      }
+    };
+
+    const isMobile = window.innerWidth < 768;
+
+    vid.addEventListener('loadedmetadata', seekToEnd, { once: true });
+    if (isMobile) vid.addEventListener('loadeddata', seekToEnd, { once: true });
+
+    vid.load();
+
+    return () => {
+      vid.removeEventListener('loadedmetadata', seekToEnd);
+      if (isMobile) vid.removeEventListener('loadeddata', seekToEnd);
+    };
   }, [])
 
   // ── progress ───────────────────────────────────────────────────────
@@ -174,20 +184,10 @@ const AboutSummary = () => {
           >
             <div className="relative aspect-video bg-[#e8e7e4bd]">
 
-              {/*
-                preload="metadata" loads just enough to show the first frame as poster.
-                PRODUCTION TIP: add poster="/images/lyvo-thumb.jpg" for instant thumbnail.
-
-                Cut file size ~60% with webm:
-                  ffmpeg -i public/videos/LyvoSFx.mp4 \
-                    -c:v libvpx-vp9 -crf 33 -b:v 0 \
-                    public/videos/LyvoSFx.webm
-                Then uncomment the webm <source>.
-              */}
               <video
                 ref={videoRef}
                 className="absolute inset-0 w-full h-full object-contain"
-                preload="metadata"
+                preload={typeof window !== 'undefined' && window.innerWidth < 768 ? 'auto' : 'metadata'}
                 playsInline
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
