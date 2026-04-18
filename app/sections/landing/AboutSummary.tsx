@@ -1,142 +1,315 @@
 "use client"
-import Marquee from "@/components/Marquee"
+import { useRef, useState, useCallback, useEffect } from 'react'
+import { useGSAP } from "@gsap/react"
+import gsap from "gsap"
+import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useRouter } from "next/navigation"
-import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 
-// Lazy load RippleGrid with no SSR - only for desktop
-const RippleGrid = dynamic(() => import('@/components/RippleGrid'), {
-  ssr: false,
-  loading: () => null
-});
+gsap.registerPlugin(ScrollTrigger)
 
 const AboutSummary = () => {
-  const router = useRouter();
-  const [showRipple, setShowRipple] = useState(false);
-  const [isMobile, setIsMobile] = useState(true); // Default to mobile for SSR
-  const rippleRef = useRef<HTMLDivElement>(null);
+  const router = useRouter()
+  const sectionRef   = useRef<HTMLDivElement>(null)
+  const headingRef   = useRef<HTMLDivElement>(null)
+  const videoWrapRef = useRef<HTMLDivElement>(null)
+  const bottomRef    = useRef<HTMLDivElement>(null)
+  const videoRef     = useRef<HTMLVideoElement>(null)
+  const overlayRef   = useRef<HTMLDivElement>(null)
+  const fillRef      = useRef<HTMLDivElement>(null)
+  const timeLabelRef = useRef<HTMLSpanElement>(null)
+  const dotRef       = useRef<HTMLDivElement>(null)
 
-  // Check if mobile on mount
-  useEffect(() => {
-    const checkMobile = () => window.innerWidth < 768;
-    setIsMobile(checkMobile());
-    
-    const handleResize = () => {
-      setIsMobile(checkMobile());
-    };
-    
-    window.addEventListener('resize', handleResize, { passive: true });
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [isPlaying,  setIsPlaying]  = useState(false)
+  const [isLoading,  setIsLoading]  = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [showPause,  setShowPause]  = useState(false)
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Intersection Observer - load RippleGrid only when visible AND on desktop
-  useEffect(() => {
-    // Don't load RippleGrid on mobile at all
-    if (isMobile) {
-      setShowRipple(false);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShowRipple(true);
-          observer.disconnect();
-        }
-      },
-      { 
-        threshold: 0.1,
-        rootMargin: '50px'
+  // ── scroll entrances ───────────────────────────────────────────────
+  useGSAP(() => {
+    const ctx = gsap.context(() => {
+      if (headingRef.current) {
+        gsap.fromTo(
+          headingRef.current.querySelectorAll('[data-line]'),
+          { y: 32, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out', stagger: 0.09,
+            scrollTrigger: { trigger: headingRef.current, start: 'top 82%', once: true } }
+        )
       }
-    );
+      if (videoWrapRef.current) {
+        gsap.fromTo(videoWrapRef.current,
+          { y: 48, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.95, ease: 'power3.out', delay: 0.15,
+            scrollTrigger: { trigger: videoWrapRef.current, start: 'top 84%', once: true } }
+        )
+      }
+      if (bottomRef.current) {
+        gsap.fromTo(bottomRef.current,
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.65, ease: 'power2.out', delay: 0.28,
+            scrollTrigger: { trigger: bottomRef.current, start: 'top 88%', once: true } }
+        )
+      }
+    }, sectionRef)
+    return () => ctx.revert()
+  }, { scope: sectionRef })
 
-    if (rippleRef.current) {
-      observer.observe(rippleRef.current);
+// ── setup video to show poster frame without needing a separate image file ──
+ useEffect(() => {
+  const vid = videoRef.current;
+  if (!vid) return;
+      const seekToEnd = () => {
+        if (vid.duration && isFinite(vid.duration)) {
+          vid.currentTime = vid.duration - 0.01;
+        }
+      };
+      vid.addEventListener('loadedmetadata', seekToEnd, { once: true });
+      vid.load();
+      return () => vid.removeEventListener('loadedmetadata', seekToEnd);
+  }, [])
+
+  // ── progress ───────────────────────────────────────────────────────
+  const handleTimeUpdate = useCallback(() => {
+    const v = videoRef.current
+    if (!v?.duration) return
+    if (fillRef.current) fillRef.current.style.width = `${(v.currentTime / v.duration) * 100}%`
+    if (timeLabelRef.current) {
+      const m   = Math.floor(v.currentTime / 60)
+      const sec = String(Math.floor(v.currentTime % 60)).padStart(2, '0')
+      timeLabelRef.current.textContent = `${m}:${sec}`
     }
+  }, [])
 
-    return () => observer.disconnect();
-  }, [isMobile]);
+  // ── play ───────────────────────────────────────────────────────────
+  const handleOverlayClick = useCallback(() => {
+    const v = videoRef.current
+    if (!v || hasStarted) return
+    setHasStarted(true)
+    setIsLoading(true)
+    v.addEventListener('canplay', () => {
+      setIsLoading(false)
+      setIsPlaying(true)
+      v.play().catch(() => {})
+      if (overlayRef.current) {
+        gsap.to(overlayRef.current, {
+          opacity: 0, duration: 0.3,
+          onComplete: () => { if (overlayRef.current) overlayRef.current.style.display = 'none' },
+        })
+      }
+    }, { once: true })
+    v.load()
+  }, [hasStarted])
+
+  // ── pause toggle ───────────────────────────────────────────────────
+  const handlePauseBtn = useCallback(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) {
+      v.play().catch(() => {})
+    } else {
+      v.pause()
+      setShowPause(true)
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current)
+      pauseTimerRef.current = setTimeout(() => setShowPause(false), 650)
+    }
+  }, [])
+
+  const handleEnded = useCallback(() => setIsPlaying(false), [])
+  const handlePause = useCallback(() => {
+    setIsPlaying(false)
+    if (dotRef.current) dotRef.current.style.background = 'rgba(0,0,0,0.22)'
+  }, [])
+  const handlePlay = useCallback(() => {
+    setIsPlaying(true)
+    if (dotRef.current) dotRef.current.style.background = 'rgba(0,0,0,0.55)'
+  }, [])
 
   return (
-    <section className="min-h-screen mt-20 flex-col items-center text-center justify-between">
+    <section
+      ref={sectionRef}
+      className="relative w-full  py-24 lg:py-36 px-4 sm:px-8 lg:px-16 overflow-hidden"
+    >
+      {/* grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage:
+            'linear-gradient(#000 2px,transparent 2px),linear-gradient(90deg,#000 2px,transparent 2px)',
+          backgroundSize: '80px 60px',
+        }}
+      />
 
-      <div className="flex flex-col items-center justify-center mt-20">
-        <h1 className="lg:text-5xl text-3xl font-amiamie font-medium">
-          The World Most Innovative Mordern Ai Voice Platform
-        </h1>
-        <p className="flex text-center justify-center lg:text-2xl mt-5 text-sm font-normal">
-          AI voice models and products powering creators, 
-          and enterprises. <br />From conversational agents to the leading AI
-          voice generator for voiceovers and audiobooks.
-        </p>
-      </div>
+      <div className="relative max-w-[800px] mx-auto flex flex-col items-center gap-12 lg:gap-16">
 
-      <div className="relative w-full h-[500px] mt-20">
-        {/* Background Layer */}
-        <div ref={rippleRef} className="absolute inset-0">
-          
-          {/* Wave Image - Mobile only */}
-          {isMobile && (
-            <div className="absolute inset-0">
-              <Image
-                src="/images/wave.png"
-                alt="Background wave"
-                fill
-                className="object-cover object-center opacity-70 pointer-events-none -mt-25"
-                priority
-                loading="eager"
-                quality={75}
-                sizes="100vw"
-              />
+        {/* heading */}
+        <div ref={headingRef} className="text-center w-full max-w-[560px]">
+          <p data-line className="text-[11px] font-semibold tracking-[0.22em] uppercase text-black/35 mb-4">
+            See it live
+          </p>
+          <h2
+            data-line
+            className="font-amiamie font-bold leading-[1.08] tracking-tight text-[#0a0a0a]
+                       text-[clamp(2rem,5vw,3.25rem)]"
+          >
+            Everything you need,
+            <br className="hidden sm:block" />
+            {" "}in under a minute.
+          </h2>
+          <p
+            data-line
+            className="mt-4 text-[clamp(0.95rem,2vw,1.05rem)] text-black/48 max-w-lg mx-auto leading-relaxed"
+          >
+            Watch Lyvo turn text into studio-quality audio, create AI agents,
+            and generate audiobooks all without leaving the dashboard.
+          </p>
+        </div>
+
+        {/* video card */}
+        <div ref={videoWrapRef} className="w-full ">
+          <div
+            className="relative w-full rounded-2xl overflow-hidden
+                       bg-back border border-black/[0.08]
+                       "
+          >
+            <div className="relative aspect-video bg-[#e8e7e4bd]">
+
+              {/*
+                preload="metadata" loads just enough to show the first frame as poster.
+                PRODUCTION TIP: add poster="/images/lyvo-thumb.jpg" for instant thumbnail.
+
+                Cut file size ~60% with webm:
+                  ffmpeg -i public/videos/LyvoSFx.mp4 \
+                    -c:v libvpx-vp9 -crf 33 -b:v 0 \
+                    public/videos/LyvoSFx.webm
+                Then uncomment the webm <source>.
+              */}
+              <video
+                ref={videoRef}
+                className="absolute inset-0 w-full h-full object-contain"
+                preload="metadata"
+                playsInline
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={handleEnded}
+                onPause={handlePause}
+                onPlay={handlePlay}
+              >
+                {/* <source src="/videos/LyvoSFx.webm" type="video/webm" /> */}
+                <source src="/videos/LyvoSFx.mp4" type="video/mp4" />
+              </video>
+
+              {/* pre-play: transparent overlay, play button floats over poster frame */}
+              {!hasStarted && (
+                <div
+                  ref={overlayRef}
+                  onClick={handleOverlayClick}
+                  className="absolute inset-0 flex items-center justify-center cursor-pointer group"
+                >
+                  <div
+                    className="w-[clamp(52px,8vw,64px)] h-[clamp(52px,8vw,64px)] rounded-full
+                               bg-white/92 backdrop-blur-sm flex items-center justify-center
+                               shadow-[0_2px_12px_rgba(0,0,0,0.14)]
+                               transition-transform duration-200 group-hover:scale-[1.07]"
+                  >
+                    <svg className="w-5 h-5 ml-0.5 text-[#0a0a0a]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5.14v14l11-7-11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+
+              {/* loading spinner */}
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/15 z-10">
+                  <div
+                    className="w-[clamp(52px,8vw,64px)] h-[clamp(52px,8vw,64px)] rounded-full
+                               bg-white/92 backdrop-blur-sm flex items-center justify-center
+                               shadow-[0_2px_12px_rgba(0,0,0,0.14)]"
+                  >
+                    <div className="w-5 h-5 rounded-full border-2 border-black/15 border-t-black/70 animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* pause flash */}
+              {showPause && (
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                             w-[52px] h-[52px] rounded-full bg-black/25 backdrop-blur-sm
+                             flex items-center justify-center pointer-events-none"
+                >
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                  </svg>
+                </div>
+              )}
+
+              {/* tap to pause/resume once started */}
+              {hasStarted && !isLoading && (
+                <button
+                  onClick={handlePauseBtn}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                  className="absolute inset-0 w-full h-full bg-transparent border-none cursor-pointer"
+                />
+              )}
             </div>
-          )}
 
-          {/* RippleGrid - Desktop only */}
-          {!isMobile && showRipple && (
-            <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
-              <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
-                <RippleGrid
-                  enableRainbow={false}
-                  gridColor="#3b82f6"
-                  rippleIntensity={0.05}
-                  gridSize={10}
-                  gridThickness={15}
-                  mouseInteraction={true}
-                  mouseInteractionRadius={1.2}
-                  opacity={0.8}
+            {/* bottom bar */}
+            <div className="flex items-center gap-3 px-3.5 py-2.5 bg-[#f0efed] border-t border-black/[0.06]">
+              <div
+                ref={dotRef}
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300"
+                style={{ background: 'rgba(0,0,0,0.18)' }}
+              />
+              <div className="flex-1 h-0.5 bg-black/[0.08] rounded-full overflow-hidden">
+                <div
+                  ref={fillRef}
+                  className="h-full w-0 bg-black/40 rounded-full"
+                  style={{ transition: 'width 0.25s linear' }}
                 />
               </div>
+              <span
+                ref={timeLabelRef}
+                className="text-[11px] font-mono text-black/30 flex-shrink-0 min-w-[28px] text-right tabular-nums"
+              >
+                –:––
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* Content Overlay */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-full px-4">
-          <h1 className="text-2xl md:text-6xl lg:font-semibold 
-           text-gray-950 text-center mb-8 font-amiamie font-bold">
-            Experience our full audio platform,<br />
-            Get Started today
-          </h1>
-          
-          <div className="flex gap-4">
-            <button 
-              onClick={() => router.push('/auth/signup')}
-              className="px-8 py-3 bg-black text-white rounded-full font-semibold hover:bg-gray-100 transition 
-              hover:text-black active:scale-95">
-              Get Started
-            </button>
-            
-            <button
-              onClick={() => router.push("/documentation")}
-              className="px-8 py-3 bg-transparent border-2 border-black
-              text-black rounded-full font-semibold hover:bg-black hover:text-white transition active:scale-95">
-              Learn More
-            </button>
           </div>
-        </div>
-      </div>
 
+        </div>
+
+        {/* CTAs */}
+        <div
+          ref={bottomRef}
+          className="flex flex-wrap items-center justify-center gap-3.5 w-full"
+        >
+          <button
+            onClick={() => router.push('/auth/signup')}
+            className="px-[26px] py-[13px] rounded-full bg-[#0a0a0a] text-white text-sm font-semibold
+                       hover:bg-[#2a2a2a] active:scale-[0.97] transition-all duration-200
+                       flex items-center gap-1.5 group"
+          >
+            Get started free
+            <svg
+              className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </button>
+          <button
+            onClick={() => router.push('/documentation')}
+            className="px-[26px] py-[13px] rounded-full border border-black/18
+                       text-[#0a0a0a] text-sm font-semibold
+                       hover:bg-black/[0.04] hover:border-black/35
+                       active:scale-[0.97] transition-all duration-200"
+          >
+            Read the docs
+          </button>
+        </div>
+
+      </div>
     </section>
   )
 }
