@@ -2196,9 +2196,11 @@ export async function archiveBug(
  * 🖼️ Get bug screenshot URL
  */
 export function getBugScreenshotUrl(screenshotPath: string): string {
-  return `${API_BASE_URL}/uploads/${screenshotPath}`;
+  // Backend now returns a complete Supabase Storage URL directly
+  // (screenshots moved off local disk since HF Spaces wipes it on every
+  // restart) — pass it straight through instead of prepending our API URL.
+  return screenshotPath;
 }
-
 // ========== CHATBOT SUPPORT API FUNCTIONS ==========
 
 /**
