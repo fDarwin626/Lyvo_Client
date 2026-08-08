@@ -55,7 +55,8 @@ function validatePassword(password: string): { valid: boolean; error: string | n
   }
   
   return { valid: true, error: null };
-}
+};
+
 
 
 
@@ -64,9 +65,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const REQUEST_TIMEOUT = 500000; 
 
 export function getAudioUrl(path: string): string {
+  // ✅ Voice sample / generated-audio URLs now come back from the backend
+  // as full Supabase Storage URLs (same migration as bug screenshots) —
+  // only prepend API_BASE_URL for legacy relative paths, otherwise this
+  // double-concatenates two full URLs into one broken string.
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
   return `${API_BASE_URL}${path}`;
 }
-
 
 export interface SignUpData {
   email: string;

@@ -72,7 +72,7 @@ const refreshBalance = useCallback(async () => {
 
     // ✅ CHECK AUTH FIRST
     if (!isAuthenticated()) {
-      console.log('Not authenticated, skipping balance refresh');
+      // // console.log('Not authenticated, skipping balance refresh');
       setIsLoading(false);
       return;
     }
@@ -95,16 +95,8 @@ const refreshBalance = useCallback(async () => {
     const extractedName = data.user_name || data.email.split('@')[0];
     setUserName(extractedName);
 
-    console.log('💰 Profile loaded:', {
-      tier: data.tier_name,
-      free: data.free_credits,
-      paid: data.paid_credits,
-      total: data.total_credits,
-      premium: data.premium_unlocked,
-      userName: extractedName,
-    });
     } catch (err: any) {
-      console.error('❌ Failed to fetch balance:', err);
+      // console.error('❌ Failed to fetch balance:', err);
       setError(err.message || 'Failed to load credits');
     } finally {
       setIsLoading(false);
@@ -133,7 +125,7 @@ const deductCredits = useCallback((amount: number, isFromFree: boolean = true) =
     setPaidCredits(prev => Math.max(0, prev - remaining));
   }
   
-  console.log(`💳 Credits deducted: -${amount}`);
+  // console.log(`💳 Credits deducted: -${amount}`); 
 }, []);
 
   /**
@@ -141,11 +133,7 @@ const deductCredits = useCallback((amount: number, isFromFree: boolean = true) =
    */
 const addCredits = useCallback((amount: number) => {
   // Add to paid credits (purchases always go to paid bucket)
-  setPaidCredits(prev => {
-    const newBalance = prev + amount;
-    console.log(`💰 Credits added: +${amount} (${prev} → ${newBalance})`);
-    return newBalance;
-  });
+setPaidCredits(prev => prev + amount);
 }, []);
   /**
    * ✅ LOAD BALANCE ON MOUNT
