@@ -5,6 +5,7 @@ import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext"; 
 import { CreditProvider } from "./contexts/CreditContext";
+import { GenerationProvider } from "./contexts/GenerationContext";
 
 export const metadata: Metadata = {
   title: "Lyvo",
@@ -29,9 +30,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
               <CreditProvider>
+              <GenerationProvider>
        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
         {children}
         </GoogleOAuthProvider>
+              </GenerationProvider>
             </CreditProvider>
 
         </ThemeProvider>

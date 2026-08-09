@@ -8,7 +8,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="top-0 w-full bg-surface/80 backdrop-blur-md z-50 border-b border-default">
+    <nav className="top-0 w-full backdrop-blur-md z-50">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         {/* Logo - responsive: icon only on mobile, icon + text on desktop */}
@@ -29,13 +29,13 @@ export default function Navbar() {
         <div className="hidden lg:flex items-center gap-3">
           <button 
             onClick={() => router.push('/auth/signin')}
-            className="px-5 py-2 text-primary hover:bg-gray-50 rounded-lg 
+            className="px-5 py-2 text-primary hover:bg-black/[0.04] rounded-lg 
             transition-colors text-sm font-medium font-amiamie">
             Log in
           </button>
           <button 
             onClick={() => router.push('/auth/signup')}
-            className="px-5 py-2 text-primary hover:bg-gray-50 rounded-lg
+            className="px-5 py-2 text-primary hover:bg-black/[0.04] rounded-lg
             font-amiamie transition-colors text-sm font-medium border border-default">
             Sign  up
           </button>
@@ -62,14 +62,14 @@ export default function Navbar() {
 
       {/* Mobile Dropdown Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden border-t border-default bg-surface/80 backdrop-blur-md">
+        <div className="lg:hidden backdrop-blur-md">
           <div className="py-2 px-6 flex flex-col gap-2">
             <button 
               onClick={() => {
                 router.push('/auth/signin');
                 setIsMenuOpen(false);
               }}
-              className="w-full px-4 py-2 text-primary hover:bg-gray-50 rounded-lg 
+              className="w-full px-4 py-2 text-primary hover:bg-black/[0.04] rounded-lg 
               transition-colors text-sm font-medium font-amiamie text-left">
               Log in
             </button>
@@ -78,7 +78,7 @@ export default function Navbar() {
                 router.push('/auth/signup');
                 setIsMenuOpen(false);
               }}
-              className="w-full px-4 py-2 text-primary hover:bg-gray-50 rounded-lg
+              className="w-full px-4 py-2 text-primary hover:bg-black/[0.04] rounded-lg
               font-amiamie transition-colors text-sm font-medium border border-default text-left">
               Sign in 
             </button>

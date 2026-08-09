@@ -1062,6 +1062,8 @@ export async function deleteClone(voiceId: string): Promise<void> {
 }
 
 
+
+
 export interface GenerationStatus {
   id: string;
   status: 'processing' | 'completed' | 'failed';
@@ -1071,6 +1073,23 @@ export interface GenerationStatus {
   credit_used: number;
   current_chunk: number | null;
   total_chunks: number | null;
+}
+
+export interface AudiobookStatusResponse {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  title: string;
+  audio_url: string | null;
+  duration: number | null;
+  current_chunk: number | null;
+  total_chunks: number | null;
+  credit_used?: number;
+}
+
+export async function checkAudiobookStatus(
+  jobId: string
+): Promise<AudiobookStatusResponse> {
+  return apiCall<AudiobookStatusResponse>(`/tts/audiobook/status/${jobId}`, {}, true);
 }
 
 // ========== ADMIN INTERFACE ========

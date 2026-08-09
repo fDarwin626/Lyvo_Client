@@ -3,22 +3,28 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { getVoices, Voices, getToken, generateSpeech, waitForGeneration, getAudioUrl } from '@/lib/api';
+import { getVoices, Voices, getToken, generateSpeech, getAudioUrl } from '@/lib/api';
 import Link from 'next/link';
-import { useCreditBalance } from '@/app/contexts/CreditContext';
+import { useGeneration } from '@/app/contexts/GenerationContext';
+import FluidLoader from '@/components/FluidLoader';
+
 
 function GenerateContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [voices, setVoices] = useState<Voices[]>([]);
+const [voices, setVoices] = useState<Voices[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<Voices | null>(null);
   const [text, setText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
-  const [chunkProgress, setChunkProgress] = useState<{ current: number | null; total: number | null }>({ current: null, total: null });
   const [error, setError] = useState('');
-  const {deductCredits} = useCreditBalance();
-  
+  const { activeGeneration, beginTracking, clearGeneration } = useGeneration();
+
+  const isThisGeneration = activeGeneration?.kind === 'tts';
+  const isProcessing = isThisGeneration && activeGeneration?.state === 'processing';
+  const isCompleted = isThisGeneration && activeGeneration?.state === 'completed';
+  const generatedAudioUrl = isCompleted && activeGeneration?.audioUrl ? getAudioUrl(activeGeneration.audioUrl) : null;
+  const generationPercent = activeGeneration?.totalChunks && activeGeneration?.currentChunk != null
+    ? (activeGeneration.currentChunk / activeGeneration.totalChunks) * 100
+    : 12;  
   useEffect(() => {
     async function loadVoices() {
       try {
@@ -53,45 +59,16 @@ const handleGenerate = async () => {
     return;
   }
 
-setError('');
-  setLoading(true);
-  setGeneratedAudio(null); // Clear previous audio
-  setChunkProgress({ current: null, total: null });
+  setError('');
 
   try {
-   
-    //  Start generation (returns immediately)
     const result = await generateSpeech(text, selectedVoice.id);
-    
-    // Wait for completion with status updates
-    const finalStatus = await waitForGeneration(
-      result.id,
-      (status) => {
-        setChunkProgress({ current: status.current_chunk, total: status.total_chunks });
-      }
-    );
-    // ✅ Deduct credits from final status
-    if (finalStatus.credit_used) {
-      deductCredits(finalStatus.credit_used);
-      console.log(`💳 TTS completed. Credits used: ${finalStatus.credit_used}`);
-    }
-
-    
-    // Step 3: Set the audio URL
-    if (finalStatus.audio_url) {
-        setGeneratedAudio(getAudioUrl(finalStatus.audio_url)); 
-
-    } else {
-      throw new Error('Audio generation failed');
-    }
-    
-} catch (err: any) {
+    beginTracking(result.id, 'tts');
+  } catch (err: any) {
     setError(err.message || 'Failed to generate speech');
-  } finally {
-    setLoading(false);
-    setChunkProgress({ current: null, total: null });
   }
 };
+
   const characterCount = text.length;
   const maxCharacters = 5000;
 
@@ -170,23 +147,22 @@ setError('');
               </div>
             )}
 
+            {isThisGeneration && activeGeneration?.state === 'failed' && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                <p className="text-xs sm:text-sm text-red-600">{activeGeneration.error || 'Generation failed'}</p>
+                <button onClick={clearGeneration} className="text-xs text-red-500 underline ml-3">Dismiss</button>
+              </div>
+            )}
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={loading || !text.trim() || !selectedVoice}
+              disabled={isProcessing || !text.trim() || !selectedVoice}
               className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm sm:text-base transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-            {loading ? (
+              {isProcessing ? (
+                'Generating...'
+              ) : (
                 <>
-                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  {chunkProgress.total ? `Generating... (${chunkProgress.current ?? 0}/${chunkProgress.total})` : 'Generating...'}
-                </>
-              ) : (               
-               
-               <>
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
                   </svg>
@@ -195,20 +171,33 @@ setError('');
               )}
             </button>
 
-            {/* Generated Audio */}
-            {generatedAudio && (
-              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-green-50 border border-green-200 rounded-lg">
+            {isProcessing && (
+              <FluidLoader percent={generationPercent} label="Generating your speech..." />
+            )}
+
+{/* Generated Audio */}
+            {generatedAudioUrl && (
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-green-50 border border-green-200 rounded-lg relative">
+                <button
+                  onClick={clearGeneration}
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
                 <h3 className="font-semibold text-green-900 mb-3 sm:mb-4 text-sm sm:text-base">✅ Speech Generated!</h3>
                 
                 {/* Audio Player */}
                 <audio controls className="w-full mb-3 sm:mb-4">
-                  <source src={generatedAudio} type="audio/wav" />
+                  <source src={generatedAudioUrl} type="audio/wav" />
                   Your browser does not support audio playback.
                 </audio>
 
                 {/* Download Button */}
                 <a
-                  href={generatedAudio}
+                  href={generatedAudioUrl}
                   download
                   className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600
                    hover:bg-green-700 text-white rounded-lg font-medium text-sm sm:text-base transition-colors"

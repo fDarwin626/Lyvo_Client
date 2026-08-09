@@ -5,10 +5,9 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import AudioPlayer from '@/components/AudioPlayer';
-import { getVoices, Voices, getToken, getRandomVoices, generateAudiobookFromFile } from '@/lib/api';
-import { useCreditBalance } from '@/app/contexts/CreditContext';
-
-
+import { getVoices, Voices, getRandomVoices, generateAudiobookFromFile } from '@/lib/api';
+import { useGeneration } from '@/app/contexts/GenerationContext';
+import FluidLoader from '@/components/FluidLoader';
 
 
 function GenarateAudiobook () {
@@ -29,58 +28,14 @@ function GenarateAudiobook () {
   const [generationError, setGenerationError] = useState<string | null>(null);
 
 
-  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
-  const [completedAudiobook, setCompletedAudiobook] = useState<any>(null); 
-  const [audiobookProgress, setAudiobookProgress] = useState<{ current: number | null; total: number | null }>({ current: null, total: null });
-  const {deductCredits} = useCreditBalance();
+const { activeGeneration, beginTracking, clearGeneration } = useGeneration();
 
-// Add polling function
-useEffect(() => {
-  if (!pollingJobId) return;
-
-  const checkStatus = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tts/audiobook/status/${pollingJobId}`, {
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to check status');
-      
-const status = await response.json();
-          if (status.status === 'completed') {
-      setPollingJobId(null);
-      setIsGenerating(false);
-      setCompletedAudiobook(status);
-      setAudiobookProgress({ current: null, total: null });
-      
-      if (status.credit_used) {
-        deductCredits(status.credit_used)
-        console.log(`📕 Audiobook completed. Credits used: ${status.credit_used}`);
-
-      }
-      } else if (status.status === 'failed') {
-        setPollingJobId(null);
-        setIsGenerating(false);
-        setGenerationError('Audiobook generation failed');
-        setAudiobookProgress({ current: null, total: null });
-      } else {
-        // Still processing update chunk progress
-        setAudiobookProgress({ current: status.current_chunk, total: status.total_chunks });
-      }
-      // If still processing, keep polling      
-    } catch (error) {
-      console.error('Status check failed:', error);
-    }
-  };
-
-  // Poll every 5 seconds
-  const interval = setInterval(checkStatus, 5000);
-  
-  return () => clearInterval(interval);
-}, [pollingJobId, deductCredits]);
-
+  const isThisGeneration = activeGeneration?.kind === 'audiobook';
+  const isProcessing = isThisGeneration && activeGeneration?.state === 'processing';
+  const isCompleted = isThisGeneration && activeGeneration?.state === 'completed';
+  const audiobookPercent = activeGeneration?.totalChunks && activeGeneration?.currentChunk != null
+    ? (activeGeneration.currentChunk / activeGeneration.totalChunks) * 100
+    : 12;
 
 
 useEffect(() => {
@@ -149,29 +104,25 @@ const handleGenerateAudiobook = async () => {
     return;
   }
 
-setIsGenerating(true);
+  setIsGenerating(true);
   setGenerationError(null);
-  setAudiobookProgress({ current: null, total: null });
 
   try {
-    const result = await generateAudiobookFromFile(      
+    const result = await generateAudiobookFromFile(
       uploadedFile,
       title,
       author || null,
       selectedAudiobookVoice.id
     );
     if (result.status === 'processing') {
-      // Start polling for status
-      setPollingJobId(result.id);
-      // Keep isGenerating = true, it will be set to false when complete
-    } 
-    
+      beginTracking(result.id, 'audiobook', title);
+    }
   } catch (error: any) {
     setGenerationError(error.message);
+  } finally {
     setIsGenerating(false);
   }
-};    
-
+};
     return(
         <ProtectedRoute>
             <div className="border rounded-2xl border-white bg-black/35 flex flex-row overflow-hidden">
@@ -356,24 +307,33 @@ setIsGenerating(true);
           </div>
 
         {/* Generate Button */}
+
           <button
             onClick={handleGenerateAudiobook}
-            disabled={isGenerating}
+            disabled={isGenerating || isProcessing}
             className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654] text-white
              font-medium py-4 px-6 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isGenerating
-              ? (audiobookProgress.total
-                  ? `Generating... (${audiobookProgress.current ?? 0}/${audiobookProgress.total})`
-                  : 'Generating...')
-              : 'Generate Audiobook'}
+            {isGenerating || isProcessing ? 'Generating...' : 'Generate Audiobook'}
           </button>
+
+          {isProcessing && (
+            <FluidLoader percent={audiobookPercent} label="Generating your audiobook..." />
+          )}
+
           {/* Error Message */}
           {generationError && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600">
               {generationError}
             </div>
-          )}                
+          )}
+
+          {isThisGeneration && activeGeneration?.state === 'failed' && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 flex items-center justify-between">
+              <span>{activeGeneration.error || 'Audiobook generation failed'}</span>
+              <button onClick={clearGeneration} className="text-xs underline ml-3">Dismiss</button>
+            </div>
+          )}
             </div>
 
             {selectedVoice && selectedVoice.sample_audio_url && (
@@ -384,13 +344,13 @@ setIsGenerating(true);
               />
             )}
 
-      {/* Bottom Audiobook Player */}
-      {completedAudiobook && (
+{/* Bottom Audiobook Player */}
+      {isCompleted && activeGeneration?.audioUrl && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-300 shadow-2xl z-50 p-6">
           <div className="max-w-4xl mx-auto">
             {/* Close Button */}
             <button
-              onClick={() => setCompletedAudiobook(null)}
+              onClick={clearGeneration}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <Icon icon="mdi:close" width="24" height="24" />
@@ -398,8 +358,10 @@ setIsGenerating(true);
 
             {/* Title */}
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{completedAudiobook.title}</h3>
-              <p className="text-sm text-gray-600">Duration: {Math.floor(completedAudiobook.duration / 60)}min {completedAudiobook.duration % 60}s</p>
+              <h3 className="text-lg font-medium text-gray-900">{activeGeneration.title || 'Your Audiobook'}</h3>
+              {activeGeneration.duration != null && (
+                <p className="text-sm text-gray-600">Duration: {Math.floor(activeGeneration.duration / 60)}min {activeGeneration.duration % 60}s</p>
+              )}
             </div>
 
             {/* Audio Player */}
@@ -410,15 +372,15 @@ setIsGenerating(true);
                 height: '40px',
                 borderRadius: '8px'
               }}
-             src={`${API_BASE_URL}${completedAudiobook.audio_url}`}
+             src={activeGeneration.audioUrl.startsWith('http') ? activeGeneration.audioUrl : `${API_BASE_URL}${activeGeneration.audioUrl}`}
             >
               Your browser does not support audio playback.
             </audio>
 
             {/* Download Button */}
             <a
-            href={`${API_BASE_URL}${completedAudiobook.audio_url}`}
-              download={`${completedAudiobook.title}.wav`}
+              href={activeGeneration.audioUrl.startsWith('http') ? activeGeneration.audioUrl : `${API_BASE_URL}${activeGeneration.audioUrl}`}
+              download={`${activeGeneration.title || 'audiobook'}.wav`}
               className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654] text-white font-medium py-3 px-6 rounded-xl hover:opacity-90 flex items-center justify-center gap-2"
             >
               <Icon icon="mdi:download" width="20" height="20" />
@@ -426,8 +388,7 @@ setIsGenerating(true);
             </a>
           </div>
         </div>
-      )}
-        
+      )}        
 
         </ProtectedRoute>
     )
