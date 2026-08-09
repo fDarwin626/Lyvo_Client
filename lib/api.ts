@@ -1489,9 +1489,14 @@ export async function exportConversation(
  * 🎵 Get agent audio file URL (for playback)
  */
 export function getAgentAudioUrl(filename: string): string {
+  // Agent audio now comes back from the backend as a full Supabase
+  // Storage URL for migrated messages — pass through untouched, only
+  // prepend API_BASE_URL for legacy relative filenames.
+  if (filename.startsWith('http://') || filename.startsWith('https://')) {
+    return filename;
+  }
   return `${API_BASE_URL}/agent/audio/${filename}`;
 }
-
 
 // ========== DELETE GENERATION FUNCTIONS ==========
 
