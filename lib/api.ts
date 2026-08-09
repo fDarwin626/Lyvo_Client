@@ -924,7 +924,7 @@ export async function checkGenerationStatus(
 // Helper function to poll until generation is complete
 export async function waitForGeneration(
   generationId: string,
-  onProgress?: (status: string) => void,
+  onProgress?: (status: GenerationStatus) => void,
   pollInterval: number = 3000,
   maxAttempts: number = 200 
 ): Promise<GenerationStatus> {
@@ -938,9 +938,8 @@ export async function waitForGeneration(
         const status = await checkGenerationStatus(generationId);
         
         if (onProgress) {
-          onProgress(status.status);
-        }
-        
+          onProgress(status);
+        }        
         if (status.status === 'completed') {
           clearInterval(interval);
           resolve(status);
@@ -1070,6 +1069,8 @@ export interface GenerationStatus {
   duration: number | null;
   voice_name: string;
   credit_used: number;
+  current_chunk: number | null;
+  total_chunks: number | null;
 }
 
 // ========== ADMIN INTERFACE ========

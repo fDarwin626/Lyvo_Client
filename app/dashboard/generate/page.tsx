@@ -15,6 +15,7 @@ function GenerateContent() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
+  const [chunkProgress, setChunkProgress] = useState<{ current: number | null; total: number | null }>({ current: null, total: null });
   const [error, setError] = useState('');
   const {deductCredits} = useCreditBalance();
   
@@ -52,9 +53,10 @@ const handleGenerate = async () => {
     return;
   }
 
-  setError('');
+setError('');
   setLoading(true);
   setGeneratedAudio(null); // Clear previous audio
+  setChunkProgress({ current: null, total: null });
 
   try {
    
@@ -65,11 +67,9 @@ const handleGenerate = async () => {
     const finalStatus = await waitForGeneration(
       result.id,
       (status) => {
-        // Optional: show status to user
-        console.log('Generation status:', status);
+        setChunkProgress({ current: status.current_chunk, total: status.total_chunks });
       }
     );
-
     // ✅ Deduct credits from final status
     if (finalStatus.credit_used) {
       deductCredits(finalStatus.credit_used);
@@ -85,10 +85,11 @@ const handleGenerate = async () => {
       throw new Error('Audio generation failed');
     }
     
-  } catch (err: any) {
+} catch (err: any) {
     setError(err.message || 'Failed to generate speech');
   } finally {
     setLoading(false);
+    setChunkProgress({ current: null, total: null });
   }
 };
   const characterCount = text.length;
@@ -175,16 +176,17 @@ const handleGenerate = async () => {
               disabled={loading || !text.trim() || !selectedVoice}
               className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm sm:text-base transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
+            {loading ? (
                 <>
                   <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Generating...
+                  {chunkProgress.total ? `Generating... (${chunkProgress.current ?? 0}/${chunkProgress.total})` : 'Generating...'}
                 </>
-              ) : (
-                <>
+              ) : (               
+               
+               <>
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
                   </svg>

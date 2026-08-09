@@ -28,8 +28,10 @@ function GenarateAudiobook () {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
+
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [completedAudiobook, setCompletedAudiobook] = useState<any>(null); 
+  const [audiobookProgress, setAudiobookProgress] = useState<{ current: number | null; total: number | null }>({ current: null, total: null });
   const {deductCredits} = useCreditBalance();
 
 // Add polling function
@@ -46,11 +48,12 @@ useEffect(() => {
       
       if (!response.ok) throw new Error('Failed to check status');
       
-          const status = await response.json();
+const status = await response.json();
           if (status.status === 'completed') {
       setPollingJobId(null);
       setIsGenerating(false);
       setCompletedAudiobook(status);
+      setAudiobookProgress({ current: null, total: null });
       
       if (status.credit_used) {
         deductCredits(status.credit_used)
@@ -61,9 +64,12 @@ useEffect(() => {
         setPollingJobId(null);
         setIsGenerating(false);
         setGenerationError('Audiobook generation failed');
+        setAudiobookProgress({ current: null, total: null });
+      } else {
+        // Still processing update chunk progress
+        setAudiobookProgress({ current: status.current_chunk, total: status.total_chunks });
       }
-      // If still processing, keep polling
-      
+      // If still processing, keep polling      
     } catch (error) {
       console.error('Status check failed:', error);
     }
@@ -143,11 +149,12 @@ const handleGenerateAudiobook = async () => {
     return;
   }
 
-  setIsGenerating(true);
+setIsGenerating(true);
   setGenerationError(null);
+  setAudiobookProgress({ current: null, total: null });
 
   try {
-    const result = await generateAudiobookFromFile(
+    const result = await generateAudiobookFromFile(      
       uploadedFile,
       title,
       author || null,
@@ -348,16 +355,19 @@ const handleGenerateAudiobook = async () => {
             />
           </div>
 
-          {/* Generate Button */}
+        {/* Generate Button */}
           <button
             onClick={handleGenerateAudiobook}
             disabled={isGenerating}
             className="w-full bg-gradient-to-r from-[#43C6AC] to-[#191654] text-white
              font-medium py-4 px-6 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isGenerating ? 'Generating...' : 'Generate Audiobook'}
+            {isGenerating
+              ? (audiobookProgress.total
+                  ? `Generating... (${audiobookProgress.current ?? 0}/${audiobookProgress.total})`
+                  : 'Generating...')
+              : 'Generate Audiobook'}
           </button>
-
           {/* Error Message */}
           {generationError && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600">
