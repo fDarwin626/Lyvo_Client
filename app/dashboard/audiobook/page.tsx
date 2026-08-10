@@ -9,7 +9,6 @@ import { getVoices, Voices, getRandomVoices, generateAudiobookFromFile } from '@
 import { useGeneration } from '@/app/contexts/GenerationContext';
 import FluidLoader from '@/components/FluidLoader';
 
-
 function GenarateAudiobook () {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   const [voices, setVoices] = useState<Voices[]>([]);
@@ -114,9 +113,9 @@ const handleGenerateAudiobook = async () => {
       author || null,
       selectedAudiobookVoice.id
     );
-    if (result.status === 'processing') {
-      beginTracking(result.id, 'audiobook', title);
-    }
+  if (result.status === 'processing') {
+      beginTracking(result.id, 'audiobook', result.credit_used, title);
+    }  
   } catch (error: any) {
     setGenerationError(error.message);
   } finally {

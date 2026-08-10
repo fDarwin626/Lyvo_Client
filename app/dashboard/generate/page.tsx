@@ -61,9 +61,10 @@ const handleGenerate = async () => {
 
   setError('');
 
-  try {
+
+try {
     const result = await generateSpeech(text, selectedVoice.id);
-    beginTracking(result.id, 'tts');
+    beginTracking(result.id, 'tts', result.credit_used);
   } catch (err: any) {
     setError(err.message || 'Failed to generate speech');
   }
