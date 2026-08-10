@@ -2466,3 +2466,150 @@ export async function markAllNotificationsRead(): Promise<{ message: string }> {
     true
   );
 }
+
+// ========== MEDIA (VIDEO TO AUDIO) INTERFACES ==========
+
+export interface MediaExtractionResponse {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  audio_url: string | null;
+  duration: number;
+  credit_used: number;
+  created_at: string;
+}
+
+export interface MediaExtractionStatus {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  audio_url: string | null;
+  duration: number;
+  credit_used: number;
+  original_filename: string;
+  created_at: string;
+}
+
+export interface MediaExtractionHistoryItem {
+  id: string;
+  original_filename: string;
+  audio_url: string | null;
+  duration: number;
+  credit_used: number;
+  created_at: string;
+  status: 'completed' | 'processing' | 'failed';
+}
+
+// ========== MEDIA (VIDEO TO AUDIO) API FUNCTIONS ==========
+
+/**
+ * 🎬 Extract audio from an uploaded video file
+ * Max 20MB. Returns immediately, poll status for completion.
+ */
+export async function extractAudioFromVideo(
+  videoFile: File
+): Promise<MediaExtractionResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+
+  const formData = new FormData();
+  formData.append('video_file', videoFile);
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}/media/video-to-audio`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+
+  if (response.status === 402) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Insufficient credits', 402);
+  }
+
+  if (response.status === 429) {
+    throw new APIError('Too many requests - please wait a moment', 429);
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Video processing failed', response.status);
+  }
+
+  return response.json();
+}
+
+/**
+ * 📊 Check extraction status (poll target)
+ */
+export async function checkExtractionStatus(
+  extractionId: string
+): Promise<MediaExtractionStatus> {
+  return apiCall<MediaExtractionStatus>(
+    `/media/generation/${extractionId}/status`,
+    {},
+    true
+  );
+}
+
+/**
+ * ⏳ Poll until extraction is complete (same pattern as waitForGeneration)
+ */
+export async function waitForExtraction(
+  extractionId: string,
+  onProgress?: (status: MediaExtractionStatus) => void,
+  pollInterval: number = 3000,
+  maxAttempts: number = 200
+): Promise<MediaExtractionStatus> {
+  let attempts = 0;
+
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      attempts++;
+
+      try {
+        const status = await checkExtractionStatus(extractionId);
+
+        if (onProgress) {
+          onProgress(status);
+        }
+
+        if (status.status === 'completed') {
+          clearInterval(interval);
+          resolve(status);
+        } else if (status.status === 'failed') {
+          clearInterval(interval);
+          reject(new APIError('Extraction failed', 500));
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          reject(new APIError('Extraction timeout - please try again', 408));
+        }
+      } catch (error) {
+        clearInterval(interval);
+        reject(error);
+      }
+    }, pollInterval);
+  });
+}
+
+/**
+ * 📜 Get user's video-to-audio extraction history
+ */
+export async function getMediaExtractionHistory(): Promise<MediaExtractionHistoryItem[]> {
+  return apiCall<MediaExtractionHistoryItem[]>('/media/history', {}, true);
+}
+
+/**
+ * 🗑️ Delete a video-to-audio extraction
+ */
+export async function deleteMediaExtraction(extractionId: string): Promise<void> {
+  await apiCall<void>(`/media/generation/${extractionId}`, {
+    method: 'DELETE',
+  }, true);
+}

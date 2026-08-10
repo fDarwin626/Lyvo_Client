@@ -6,7 +6,8 @@ import { getUserTTSHistory, getUserAudiobooks, getMyClones,
     TTSHistory, AudiobookJob, ClonedVoice, deleteClone, 
     deleteAudiobook, deleteGeneration, getTranscriptionHistory,
     deleteTranscription, downloadTranscription, 
-    getAudioUrl} from "@/lib/api";
+    getAudioUrl, getMediaExtractionHistory, deleteMediaExtraction,
+    MediaExtractionHistoryItem} from "@/lib/api";    
 import { Icon } from "@iconify/react";
 import AudioPlayer from "@/components/AudioPlayer";
 
@@ -15,12 +16,15 @@ function HistoryPage() {
     const [ttsHistory, setTtsHistory] = useState<TTSHistory[]>([]);
     const [audiobooks, setAudiobooks] = useState<AudiobookJob[]>([]);
     const [clones, setClones] = useState<ClonedVoice[]>([]);
-    const [transcriptions, setTranscriptions] = useState<any[]>([]);
+    
+const [transcriptions, setTranscriptions] = useState<any[]>([]);
+    const [mediaExtractions, setMediaExtractions] = useState<MediaExtractionHistoryItem[]>([]);
     
     const [loadingTTS, setLoadingTTS] = useState(true);
     const [loadingAudiobooks, setLoadingAudiobooks] = useState(true);
     const [loadingClones, setLoadingClones] = useState(true);
     const [loadingTranscriptions, setLoadingTranscriptions] = useState(true);
+    const [loadingMedia, setLoadingMedia] = useState(true);
 
     // Audio Player State
     const [playingAudio, setPlayingAudio] = useState<{ url: string; name: string } | null>(null);
@@ -35,6 +39,7 @@ function HistoryPage() {
         fetchAudiobooks();
         fetchClones();
         fetchTranscriptions();
+        fetchMediaExtractions();
     }, []);
 
     async function fetchTTSHistory() {
@@ -81,6 +86,16 @@ function HistoryPage() {
         }
     }
 
+    async function fetchMediaExtractions() {
+        try {
+            const data = await getMediaExtractionHistory();
+            setMediaExtractions(data);
+        } catch (error) {
+            console.error("Failed to load media extractions:", error);
+        } finally {
+            setLoadingMedia(false);
+        }
+    }
 // ========== AUDIO PLAYER FUNCTIONS ==========
 const handlePlay = (audioUrl: string, name: string) => {
     // Pass the relative URL directly - AudioPlayer will convert it
@@ -207,6 +222,27 @@ const handleDeleteClone = async (id: string) => {
     }
 };
 
+const handleDeleteMedia = async (id: string) => {
+    if (!confirm("Delete this extraction? This cannot be undone.")) {
+        return;
+    }
+
+    try {
+        await deleteMediaExtraction(id);
+        fetchMediaExtractions();
+        alert("Extraction deleted successfully ✅");
+    } catch (error: any) {
+        console.error("Delete failed:", error);
+
+        if (error.statusCode === 403) {
+            alert("❌ The Content you are trying to delete does not exist or Access restricted");
+        } else if (error.statusCode === 404) {
+            alert("❌ Extraction not found");
+        } else {
+            alert(error.message || "❌ Failed to delete extraction");
+        }
+    }
+};
 
     return (
         <ProtectedRoute>
@@ -479,6 +515,119 @@ const handleDeleteClone = async (id: string) => {
                             </div>
                         )}
                     </div>
+
+                    {/* ========== SECTION: VIDEO TO AUDIO ========== */}
+                <div className="mb-12">
+                    <h2 className="text-2xl font-amiamie font-bold mb-4">Video to Audio</h2>
+
+                    {loadingMedia ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={i} className="bg-white rounded-2xl p-6 animate-pulse">
+                                    <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : mediaExtractions.length === 0 ? (
+                        <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
+                            <Icon icon="mdi:video-box" width="64" height="64" className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-600 text-lg mb-4">No audio extracted from video yet</p>
+                            <a href="/dashboard/media">
+                                <button className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800">
+                                    Extract Your First Audio
+                                </button>
+                            </a>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {mediaExtractions.map((ext) => (
+                                <div
+                                    key={ext.id}
+                                    className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-gray-300 
+                                    transition-all shadow-sm hover:shadow-md group relative"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="relative mb-4 h-32 bg-gradient-to-br from-slate-950 to-teal-950
+                                    rounded-lg flex items-center justify-center overflow-hidden">
+                                        <Icon icon="pixel:camera" width="60" height="60" className="text-gray-500/50" />
+                                        {ext.status === 'processing' && (
+                                            <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs 
+                                            px-3 py-1 rounded-full font-semibold">
+                                                Processing...
+                                            </div>
+                                        )}
+                                        {ext.status === 'failed' && (
+                                            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs 
+                                            px-3 py-1 rounded-full font-semibold">
+                                                Failed
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-2">
+                                            {ext.original_filename}
+                                        </h3>
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <Icon icon="arcticons:emoji-alarm-clock" width="18" height="18"/>
+                                            <span>{ext.duration ? `${Math.floor(ext.duration / 60)}m ${Math.floor(ext.duration % 60)}s` : 'N/A'}</span>
+                                            <span className="text-gray-400">•</span>
+                                            <span>{new Date(ext.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenDropdown(openDropdown === `media-${ext.id}` ? null : `media-${ext.id}`);
+                                        }}
+                                        className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg 
+                                        text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icon icon="mdi:dots-horizontal" width="20" height="20" />
+                                        <span>Options</span>
+                                    </button>
+                                    <div className={`absolute bottom-full left-0 right-0 mb-2 bg-white border-2 
+                                    border-gray-200 rounded-lg shadow-lg py-2 transition-all z-10 ${
+                                        openDropdown === `media-${ext.id}` ? 'opacity-100 visible' : 'opacity-0 invisible'
+                                    }`}>
+                                        <button
+                                            onClick={() => ext.audio_url && handlePlay(ext.audio_url, ext.original_filename)}
+                                            disabled={ext.status !== 'completed' || !ext.audio_url}
+                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 
+                                            flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Icon icon="mdi:play-circle" width="20" height="20" />
+                                            Play Audio
+                                        </button>
+
+                                        <button
+                                            onClick={() => ext.audio_url && handleDownload(ext.audio_url, `${ext.original_filename}.mp3`)}
+                                            disabled={ext.status !== 'completed' || !ext.audio_url}
+                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 
+                                            flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Icon icon="mdi:download" width="20" height="20" />
+                                            Download
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleDeleteMedia(ext.id)}
+                                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 
+                                            flex items-center gap-2"
+                                        >
+                                            <Icon icon="mdi:delete" width="20" height="20" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
 
                 {/* ========== SECTION 3: CLONED VOICES ========== */}
                 <div className="mb-12">

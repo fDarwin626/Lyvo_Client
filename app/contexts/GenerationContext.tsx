@@ -1,10 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { checkGenerationStatus, checkAudiobookStatus } from '@/lib/api';
+import { checkGenerationStatus, checkAudiobookStatus, checkExtractionStatus } from '@/lib/api';
 import { useCreditBalance } from './CreditContext';
 
-type GenerationKind = 'tts' | 'audiobook';
+type GenerationKind = 'tts' | 'audiobook' | 'media';
 type GenerationState = 'processing' | 'completed' | 'failed';
 
 interface ActiveGeneration {
@@ -36,10 +36,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   const [activeGeneration, setActiveGeneration] = useState<ActiveGeneration | null>(null);
   const { deductCredits, addCredits } = useCreditBalance();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
-// Resume an in-flight job after a full page reload. Note: cost isn't
-  // re-deducted here — it was already deducted optimistically when
-  // beginTracking first fired, before the reload happened.
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -66,8 +63,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ id, kind, title, startedAt, cost }));
     }
-    // Deduct immediately — this mirrors the backend placing a hold at
-    // the same moment. If the generation fails, we add it back below.
     deductCredits(cost);
     setActiveGeneration({
       id, kind, startedAt, cost,
@@ -80,6 +75,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       error: null,
     });
   }, [deductCredits]);
+
   const clearGeneration = useCallback(() => {
     if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
     setActiveGeneration(null);
@@ -94,12 +90,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
     const poll = async () => {
       try {
-          if (activeGeneration.kind === 'tts') {
+        if (activeGeneration.kind === 'tts') {
           const status = await checkGenerationStatus(activeGeneration.id);
           if (status.status === 'completed') {
-            // Already deducted optimistically in beginTracking — the
-            // backend's real charge happened too, but the frontend
-            // balance shouldn't move twice for one generation.
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
             setActiveGeneration(prev => prev && {
               ...prev, state: 'completed',
@@ -107,19 +100,17 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               currentChunk: status.total_chunks, totalChunks: status.total_chunks,
             });
           } else if (status.status === 'failed') {
-            // Backend released its hold — put the visual balance back too
             addCredits(activeGeneration.cost);
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
             setActiveGeneration(prev => prev && { ...prev, state: 'failed', error: 'Generation failed' });
-          } else {           
+          } else {
             setActiveGeneration(prev => prev && {
               ...prev, currentChunk: status.current_chunk, totalChunks: status.total_chunks,
             });
           }
-          } else {
+        } else if (activeGeneration.kind === 'audiobook') {
           const status = await checkAudiobookStatus(activeGeneration.id);
           if (status.status === 'completed') {
-            // Already deducted optimistically in beginTracking
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
             setActiveGeneration(prev => prev && {
               ...prev, state: 'completed',
@@ -128,15 +119,27 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               currentChunk: status.total_chunks, totalChunks: status.total_chunks,
             });
           } else if (status.status === 'failed') {
-            // Backend released its hold — put the visual balance back too
             addCredits(activeGeneration.cost);
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
             setActiveGeneration(prev => prev && { ...prev, state: 'failed', error: 'Audiobook generation failed' });
           } else {
-
             setActiveGeneration(prev => prev && {
               ...prev, currentChunk: status.current_chunk, totalChunks: status.total_chunks,
             });
+          }
+        } else {
+          // 'media' — video-to-audio extraction. No chunk progress exists.
+          const status = await checkExtractionStatus(activeGeneration.id);
+          if (status.status === 'completed') {
+            if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
+            setActiveGeneration(prev => prev && {
+              ...prev, state: 'completed',
+              audioUrl: status.audio_url, duration: status.duration,
+            });
+          } else if (status.status === 'failed') {
+            addCredits(activeGeneration.cost);
+            if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
+            setActiveGeneration(prev => prev && { ...prev, state: 'failed', error: 'Audio extraction failed' });
           }
         }
       } catch (err) {

@@ -149,7 +149,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* Card 4: Voice Swap */}
-          <Link href="/dashboard/voice-swap">
+          <Link href="/dashboard/media">
             <div className="bg-gray-200 rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 hover:shadow-md transition-all cursor-pointer">
               <div className="relative w-full h-14 sm:h-16 lg:h-20 mb-3 lg:mb-6">
                 <div className="absolute top-0 lg:top-1 left-2 lg:left-4 w-16 h-16 sm:w-20 sm:h-20 lg:w-25 lg:h-25 flex items-center justify-center">
@@ -170,7 +170,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-center pt-2 lg:pt-3">
-              <h3 className="text-xs lg:text-sm font-semibold mb-1">voice Swap</h3>
+              <h3 className="text-xs lg:text-sm font-semibold mb-1">Devox Library</h3>
             </div>
           </Link>
 
@@ -256,19 +256,20 @@ export default function DashboardPage() {
             </Link>
 
             {/*Voice Design*/}
-            <div className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 border border-gray-200 rounded-xl opacity-50 cursor-not-allowed">
+            <Link href="/dashboard/media">
+            <div className="flex items-center mb-4 lg:mb-5 gap-3 lg:gap-4 p-3 lg:p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group">
               <div className="w-10 h-10 lg:w-12 lg:h-12  bg-red-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm lg:text-base font-semibold text-gray-900">Voice Design</h3>
-                <p className="text-xs lg:text-sm text-gray-600">Design an entirely new voice from a text prompt </p>
-                <span className="text-xs text-gray-500 italic">Coming soon</span>
+                <h3 className="text-sm lg:text-base font-semibold text-gray-900">Convert Video to Mp3</h3>
+                <p className="text-xs lg:text-sm text-gray-600">Convert your videos to high-quality MP3 files</p>
               </div>
             </div>
-
+             </Link>
+            
             {/* Voice Collections */}
             <div className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 border border-gray-200 rounded-xl opacity-50 cursor-not-allowed">
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-blue-500 rounded-lg lg:rounded-xl flex items-center justify-center flex-shrink-0">
