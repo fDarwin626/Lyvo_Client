@@ -1,10 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { checkGenerationStatus, checkAudiobookStatus, checkExtractionStatus } from '@/lib/api';
+import { checkGenerationStatus, checkAudiobookStatus, checkExtractionStatus, checkAvatarStatus } from '@/lib/api';
 import { useCreditBalance } from './CreditContext';
 
-type GenerationKind = 'tts' | 'audiobook' | 'media';
+type GenerationKind = 'tts' | 'audiobook' | 'media' | 'avatar';
 type GenerationState = 'processing' | 'completed' | 'failed';
 
 interface ActiveGeneration {
@@ -13,9 +13,10 @@ interface ActiveGeneration {
   state: GenerationState;
   currentChunk: number | null;
   totalChunks: number | null;
-  audioUrl: string | null;
+audioUrl: string | null;
+  videoUrl: string | null;
   duration: number | null;
-  title: string | null;
+  title: string | null;  
   error: string | null;
   startedAt: number;
   cost: number;
@@ -46,15 +47,16 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       setActiveGeneration({
         id, kind, title: title ?? null, startedAt,
         cost: cost ?? 0,
-        state: 'processing',
+state: 'processing',
         currentChunk: null,
         totalChunks: null,
         audioUrl: null,
+        videoUrl: null,
         duration: null,
         error: null,
       });
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
@@ -71,11 +73,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       currentChunk: null,
       totalChunks: null,
       audioUrl: null,
+      videoUrl: null,
       duration: null,
       error: null,
     });
   }, [deductCredits]);
-
   const clearGeneration = useCallback(() => {
     if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
     setActiveGeneration(null);
@@ -127,8 +129,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               ...prev, currentChunk: status.current_chunk, totalChunks: status.total_chunks,
             });
           }
-        } else {
-          // 'media' — video-to-audio extraction. No chunk progress exists.
+} else if (activeGeneration.kind === 'media') {
+          // video-to-audio extraction. No chunk progress exists.
           const status = await checkExtractionStatus(activeGeneration.id);
           if (status.status === 'completed') {
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
@@ -141,7 +143,21 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
             setActiveGeneration(prev => prev && { ...prev, state: 'failed', error: 'Audio extraction failed' });
           }
-        }
+        } else {
+          // 'avatar' — photo-to-video (Visage Studio). No chunk progress exists.
+          const status = await checkAvatarStatus(activeGeneration.id);
+          if (status.status === 'completed') {
+            if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
+            setActiveGeneration(prev => prev && {
+              ...prev, state: 'completed',
+              videoUrl: status.result_video_url, duration: null,
+            });
+          } else if (status.status === 'failed') {
+            addCredits(activeGeneration.cost);
+            if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
+            setActiveGeneration(prev => prev && { ...prev, state: 'failed', error: status.error_message || 'Avatar generation failed' });
+          }
+        }        
       } catch (err) {
         console.error('Generation poll failed:', err);
       }

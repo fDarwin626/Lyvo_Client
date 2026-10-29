@@ -12,6 +12,27 @@ import {
   isAuthenticated
 } from '@/lib/api';
 
+/* Tiny equalizer glyph — the page's one signature element.
+   Bars are "listening" (animated) when a notification is unread,
+   and flatline to silence once it's read. */
+function Waveform({ active }: { active: boolean }) {
+  const bars = [0.4, 1, 0.6, 0.85, 0.35];
+  return (
+    <span className="flex items-end gap-[2px] h-3.5 w-4 flex-shrink-0">
+      {bars.map((h, i) => (
+        <span
+          key={i}
+          className={`w-[2px] rounded-full ${active ? 'bg-accent animate-waveform-bar' : 'bg-[rgb(var(--text-muted))]'}`}
+          style={{
+            height: active ? '100%' : `${h * 100}%`,
+            animationDelay: `${i * 0.12}s`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -19,14 +40,14 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  // Fetch notifications on mount
-useEffect(() => {
-  // ✅ Only fetch if authenticated
-  if (isAuthenticated()) {
-    fetchNotifications();
-  }
-}, []); // Or add [isAuthenticated] if using context
+  useEffect(() => {
+    if (isAuthenticated()) {
+      fetchNotifications();
+    }
+  }, []);
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -42,46 +63,33 @@ useEffect(() => {
     }
   };
 
-  // Handle notification click (mark as read + navigate)
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
       try {
         await markNotificationRead(notification.id);
-        
-        // Update local state
         setNotifications(prev =>
-          prev.map(n =>
-            n.id === notification.id ? { ...n, is_read: true } : n
-          )
+          prev.map(n => (n.id === notification.id ? { ...n, is_read: true } : n))
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
       } catch (err) {
         console.error('Failed to mark as read:', err);
       }
     }
-
-    // Navigate to link if exists
     if (notification.link) {
       router.push("/dashboard/history");
     }
   };
 
-  // Handle delete notification
   const handleDelete = async (notificationId: string, isRead: boolean) => {
     if (!isRead) {
       alert('Please read the notification before deleting');
       return;
     }
-
-    if (!confirm('Delete this notification?')) {
-      return;
-    }
+    if (!confirm('Delete this notification?')) return;
 
     try {
       setDeletingId(notificationId);
       await deleteNotification(notificationId);
-      
-      // Remove from local state
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (err: any) {
       alert(err.message || 'Failed to delete notification');
@@ -90,182 +98,183 @@ useEffect(() => {
     }
   };
 
-  // Handle mark all as read
   const handleMarkAllRead = async () => {
     if (unreadCount === 0) return;
-
     try {
       await markAllNotificationsRead();
-      
-      // Update all notifications to read
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, is_read: true }))
-      );
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (err: any) {
       alert(err.message || 'Failed to mark all as read');
     }
   };
 
-  // Get notification icon based on type
   const getNotificationIcon = (type: string) => {
-    if (type.includes('tts')) return <Icon icon="mdi:text-to-speech-off" width="24" height="24"  className="color: #352d2d" />;
-    if (type.includes('stt')) return <Icon icon="carbon:ibm-watson-text-to-speech" width="32" height="32"  className="color: #352d2d" />;
-    if (type.includes('audiobook')) return <Icon icon="arcticons:audiobookshelf" width="48" height="48"  className="color: #352d2d" />;
-    if (type.includes('voice_clone')) return <Icon icon="material-symbols-light:theater-comedy-outline" width="24" height="24"  className="color: #352d2d" />;
-    if (type.includes('payment')) return <Icon icon="fluent:wallet-credit-card-32-regular" width="32" height="32"  className="color: #352d2d" />;
-    return <Icon icon="line-md:bell-alert-loop" width="24" height="24"  className="color: #352d2d" />;
+    const common = "text-primary";
+    if (type.includes('tts')) return <Icon icon="mdi:text-to-speech-off" width="20" height="20" className={common} />;
+    if (type.includes('stt')) return <Icon icon="carbon:ibm-watson-text-to-speech" width="20" height="20" className={common} />;
+    if (type.includes('audiobook')) return <Icon icon="arcticons:audiobookshelf" width="20" height="20" className={common} />;
+    if (type.includes('voice_clone')) return <Icon icon="material-symbols-light:theater-comedy-outline" width="20" height="20" className={common} />;
+    if (type.includes('payment')) return <Icon icon="fluent:wallet-credit-card-32-regular" width="20" height="20" className={common} />;
+    return <Icon icon="line-md:bell-alert-loop" width="20" height="20" className={common} />;
   };
 
-  // Get notification color based on type
-  const getNotificationColor = (type: string) => {
-    if (type.includes('failed')) return 'text-red-500';
-    if (type.includes('success')) return 'text-natural-500';
-    return 'text-blue-500';
+  // Status is now conveyed as a small mono tag rather than a colored card —
+  // failure is the only state that borrows off-palette color, and sparingly.
+  const getStatusTag = (type: string) => {
+    if (type.includes('failed')) return { label: 'Failed', className: 'text-danger' };
+    if (type.includes('success')) return { label: 'Done', className: 'text-secondary' };
+    return null;
   };
+
+  const visible = filter === 'unread' ? notifications.filter(n => !n.is_read) : notifications;
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4 lg:p-6">
-      {/* Header */}
-      <div className="max-w-4xl mx-auto mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-primary">Notifications</h1>
-            <p className="text-secondary mt-1 text-sm sm:text-base">
-              Stay updated with your activity
-            </p>
-          </div>
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-10">
+      <div className="max-w-3xl mx-auto">
 
-          {/* Mark all as read button */}
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors text-sm sm:text-base whitespace-nowrap"
-            >
-              <Icon icon="mdi:check-all" width="18" height="18" className="sm:w-5 sm:h-5" />
-              Mark all read
-            </button>
-          )}
+        {/* Header */}
+        <div className="mb-8">
+          <p className="text-[11px] tracking-[0.2em] uppercase text-muted mb-2">Activity log</p>
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <h1 className="font-[ArchivoBlack] text-3xl sm:text-4xl text-primary tracking-tight">
+              Notifications
+            </h1>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="text-sm text-secondary hover:text-primary underline underline-offset-4 decoration-[rgb(var(--border))] hover:decoration-[rgb(var(--text-primary))] transition-colors self-start sm:self-auto"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Unread count indicator */}
-        {unreadCount > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 sm:p-3 flex items-center gap-2">
-            <Icon icon="mdi:information" width="18" height="18" className="text-blue-500 flex-shrink-0 sm:w-5 sm:h-5" />
-            <p className="text-xs sm:text-sm text-blue-700">
-              You have <strong>{unreadCount}</strong> unread notification{unreadCount !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
-      </div>
+        {/* Tabs */}
+        <div className="flex items-center gap-6 border-b border-default mb-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`relative pb-3 text-sm font-medium tracking-wide uppercase transition-colors ${
+              filter === 'all' ? 'text-primary' : 'text-muted hover:text-secondary'
+            }`}
+          >
+            All <span className="text-muted normal-case">({notifications.length})</span>
+            {filter === 'all' && (
+              <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[rgb(var(--text-primary))]" />
+            )}
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`relative pb-3 text-sm font-medium tracking-wide uppercase transition-colors ${
+              filter === 'unread' ? 'text-primary' : 'text-muted hover:text-secondary'
+            }`}
+          >
+            Unread <span className="text-muted normal-case">({unreadCount})</span>
+            {filter === 'unread' && (
+              <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-accent" />
+            )}
+          </button>
+        </div>
 
-      {/* Notifications List */}
-      <div className="max-w-4xl mx-auto">
-        {loading ? (
-          // Loading state
-          <div className="flex items-center justify-center py-8 sm:py-12">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-brand"></div>
-              <p className="text-secondary text-sm sm:text-base">Loading notifications...</p>
+        {/* List */}
+        <div className="mt-2">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-4 py-20">
+              <Waveform active />
+              <p className="text-xs tracking-[0.2em] uppercase text-muted">Loading activity</p>
             </div>
-          </div>
-        ) : error ? (
-          // Error state
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
-            <Icon icon="mdi:alert-circle" width="40" height="40" className="text-red-500 mx-auto mb-3 sm:w-12 sm:h-12" />
-            <p className="text-red-700 font-medium text-sm sm:text-base">{error}</p>
-            <button
-              onClick={fetchNotifications}
-              className="mt-3 sm:mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm sm:text-base"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : notifications.length === 0 ? (
-          // Empty state
-          <div className="bg-surface border border-default rounded-lg p-8 sm:p-12 text-center">
-            <Icon icon="mdi:bell-off-outline" width="48" height="48" className="text-gray-300 mx-auto mb-3 sm:mb-4 sm:w-16 sm:h-16" />
-            <h3 className="text-lg sm:text-xl font-semibold text-primary mb-2">No notifications yet</h3>
-            <p className="text-secondary text-sm sm:text-base">
-              You'll see notifications here when you use TTS, audiobooks, voice cloning, and more
-            </p>
-          </div>
-        ) : (
-          // Notifications list
-          <div className="space-y-2 sm:space-y-3">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`bg-surface border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${
-                  notification.is_read
-                    ? 'border-default'
-                    : 'border-blue-300 bg-blue-50'
-                }`}
-                onClick={() => handleNotificationClick(notification)}
+          ) : error ? (
+            <div className="border border-default py-12 px-6 text-center">
+              <p className="font-[ArchivoBlack] text-lg text-primary mb-2">Something broke</p>
+              <p className="text-sm text-secondary mb-5">{error}</p>
+              <button
+                onClick={fetchNotifications}
+                className="text-sm text-primary underline underline-offset-4 hover:text-accent transition-colors"
               >
-                <div className="flex items-start gap-2 sm:gap-4">
-                  {/* Icon */}
-                  <div className={`text-2xl sm:text-3xl flex-shrink-0 ${getNotificationColor(notification.type)}`}>
-                    {getNotificationIcon(notification.type)}
-                  </div>
+                Try again
+              </button>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="border border-default py-16 px-6 text-center">
+              <svg width="64" height="20" viewBox="0 0 64 20" className="mx-auto mb-5 opacity-40">
+                <line x1="0" y1="10" x2="64" y2="10" stroke="rgb(var(--text-muted))" strokeWidth="2" />
+              </svg>
+              <h3 className="font-[ArchivoBlack] text-xl text-primary mb-2">
+                {filter === 'unread' ? 'Nothing unread' : 'All quiet'}
+              </h3>
+              <p className="text-secondary text-sm max-w-xs mx-auto">
+                {filter === 'unread'
+                  ? "You're caught up. Switch back to All to see your full history."
+                  : "You'll see activity here from your TTS, audiobook, and voice cloning runs."}
+              </p>
+            </div>
+          ) : (
+            <ul>
+              {visible.map((notification) => {
+                const status = getStatusTag(notification.type);
+                return (
+                  <li
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className="group relative border-b border-default py-4 pl-4 pr-1 cursor-pointer transition-colors hover:bg-surface"
+                  >
+                    {!notification.is_read && (
+                      <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-accent" />
+                    )}
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="mt-0.5 flex-shrink-0 w-8 h-8 flex items-center justify-center border border-default">
+                        {getNotificationIcon(notification.type)}
+                      </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-semibold text-primary text-sm sm:text-base">
-                        {notification.title}
-                      </h3>
-                      
-                      {/* NEW badge for unread */}
-                      {!notification.is_read && (
-                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-full flex-shrink-0">
-                          <Icon icon="mdi:new-box" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
-                          NEW
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-medium text-primary text-sm sm:text-[15px] truncate">
+                            {notification.title}
+                          </h3>
+                          <Waveform active={!notification.is_read} />
+                        </div>
+
+                        <p className="text-secondary text-sm mt-1 mb-2 line-clamp-2 sm:line-clamp-none">
+                          {notification.message}
+                        </p>
+
+                        <div className="flex items-center gap-4 text-[11px] tracking-wide uppercase text-muted font-mono">
+                          <span>{notification.time_ago}</span>
+                          {status && <span className={status.className}>{status.label}</span>}
+                          {notification.link && (
+                            <span className="text-accent normal-case font-sans flex items-center gap-1">
+                              View details
+                              <Icon icon="mdi:arrow-right" width="12" height="12" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {notification.is_read && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(notification.id, notification.is_read);
+                          }}
+                          disabled={deletingId === notification.id}
+                          className="p-2 text-muted hover:text-danger transition-colors disabled:opacity-50 flex-shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-100"
+                          title="Delete notification"
+                        >
+                          {deletingId === notification.id ? (
+                            <Icon icon="mdi:loading" width="16" height="16" className="animate-spin" />
+                          ) : (
+                            <Icon icon="mdi:delete-outline" width="16" height="16" />
+                          )}
+                        </button>
                       )}
                     </div>
-
-                    <p className="text-secondary text-xs sm:text-sm mb-2 line-clamp-2 sm:line-clamp-none">
-                      {notification.message}
-                    </p>
-
-                    <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-muted">
-                      <span className="flex items-center gap-1">
-                        <Icon icon="mdi:clock-outline" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
-                        {notification.time_ago}
-                      </span>
-                      {notification.link && (
-                        <span className="flex items-center gap-1 text-blue-500">
-                          <Icon icon="mdi:arrow-right" width="12" height="12" className="sm:w-3.5 sm:h-3.5" />
-                          View details
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Delete button (only for read notifications) */}
-                  {notification.is_read && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(notification.id, notification.is_read);
-                      }}
-                      disabled={deletingId === notification.id}
-                      className="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
-                      title="Delete notification"
-                    >
-                      {deletingId === notification.id ? (
-                        <Icon icon="mdi:loading" width="18" height="18" className="animate-spin sm:w-5 sm:h-5" />
-                      ) : (
-                        <Icon icon="mdi:delete-outline" width="18" height="18" className="sm:w-5 sm:h-5" />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

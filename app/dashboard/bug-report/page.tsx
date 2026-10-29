@@ -2,54 +2,78 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  getBugReports, 
-  toggleBugHeart, 
+import {
+  getBugReports,
+  toggleBugHeart,
   BugReport,
   BugListResponse,
-  isAuthenticated 
+  isAuthenticated
 } from '@/lib/api';
 import { Icon } from '@iconify/react';
 
 /**
- * 🐛 Bug Reports Page
+ * Bug Reports Page
  * Public view - all logged-in users can see bugs and heart them
- * Only admins can comment/change status (we'll add that in Section 3 Part 2)
+ * Only admins can comment/change status (Section 3 Part 2)
  */
+
+function ArrowUpDown({ order }: { order: 'asc' | 'desc' }) {
+  return (
+    <svg
+      className={`w-3 h-3 transition-transform ${order === 'asc' ? 'rotate-180' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    </svg>
+  );
+}
+
+// Status: dot + tracked-caps label. No colored pill backgrounds.
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  new: { label: 'New', className: 'text-danger' },
+  in_progress: { label: 'In progress', className: 'text-accent' },
+  resolved: { label: 'Resolved', className: 'text-muted' },
+};
+
+// Priority differentiated by weight + color rather than a new color per level.
+const PRIORITY_META: Record<string, { label: string; className: string }> = {
+  critical: { label: 'Critical', className: 'text-danger font-[ArchivoBlack]' },
+  high: { label: 'High', className: 'text-danger' },
+  medium: { label: 'Medium', className: 'text-accent' },
+  low: { label: 'Low', className: 'text-muted' },
+};
+
 export default function BugReportsPage() {
   const router = useRouter();
-  
-  // State management
+
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Pagination
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalBugs, setTotalBugs] = useState(0);
   const pageSize = 20;
-  
-  // Filters
+
   const [statusFilter, setStatusFilter] = useState<'new' | 'in_progress' | 'resolved' | ''>('');
   const [sortBy, setSortBy] = useState<'created_at' | 'hearts_count' | 'updated_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // Check authentication
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/signin?redirect=/dashboard/bugs');
     }
   }, [router]);
-  
-  // Fetch bugs
+
   useEffect(() => {
     fetchBugs();
   }, [currentPage, statusFilter, sortBy, sortOrder]);
-  
+
   const fetchBugs = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response: BugListResponse = await getBugReports({
         status_filter: statusFilter || undefined,
@@ -58,22 +82,20 @@ export default function BugReportsPage() {
         page: currentPage,
         page_size: pageSize,
       });
-      
+
       setBugs(response.bugs);
       setTotalBugs(response.total);
     } catch (err: any) {
-      setError(err.message || 'Failed to load bug reports');
+      setError(err.message || 'Failed to load bug reports.');
     } finally {
       setLoading(false);
     }
   };
-  
-  // Handle heart toggle
+
   const handleHeartToggle = async (bugId: string) => {
     try {
       const result = await toggleBugHeart(bugId);
-      
-      // Update UI optimistically
+
       setBugs(prevBugs =>
         prevBugs.map(bug =>
           bug.id === bugId
@@ -89,38 +111,7 @@ export default function BugReportsPage() {
       console.error('Failed to toggle heart:', err);
     }
   };
-  
-  // Get status badge color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'in_progress':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'resolved':
-        return 'bg-green-100 text-green-700 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-  
-  // Get priority badge color
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'bg-red-500 text-white';
-      case 'high':
-        return 'bg-orange-500 text-white';
-      case 'medium':
-        return 'bg-blue-500 text-white';
-      case 'low':
-        return 'bg-gray-400 text-white';
-      default:
-        return 'bg-gray-300 text-gray-700';
-    }
-  };
-  
-  // Format date
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -128,229 +119,221 @@ export default function BugReportsPage() {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
-  
-  // Truncate text
+
   const truncate = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
 
-  const getReporterName = (email:string) => {
-    if (!email) return "Unknown 🤔";
+  const getReporterName = (email: string) => {
+    if (!email) return 'Unknown';
     return email.split('@')[0];
-  }
-  
+  };
+
+  const totalPages = Math.ceil(totalBugs / pageSize);
+
   return (
-    <div className="min-h-screen py3">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+    <div className="min-h-screen bg-background pt-16 sm:pt-20 px-4 sm:px-6 pb-16 sm:pb-24">
+      <div className="max-w-4xl mx-auto">
+
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4 flex flex-row gap-2 lg:border-b border-default">
-            <Icon icon="marketeq:bug" width="30" height="30" className="color: #828282" /> Bug Reports
-          </h1>
-          <p className="text-gray-600/45 text-sm lg:text-xl">
-            Found or noticed a bug on our page? Report it here so we can fix it!
+        <header className="mb-10 sm:mb-14 pb-6 sm:pb-8 border-b border-default">
+          <p className="font-[ArchivoBlack] text-[10px] sm:text-[11px] tracking-[0.2em] uppercase text-muted mb-3">
+            Feedback
           </p>
-        </div>
-        
-        {/* Actions Bar */}
-        <div className=" p-4 mb-6 flex flex-wrap items-center justify-between gap-4 text-sm">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 font-amiamie">
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as any);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2
-               focus:ring-blue-500/50 focus:border-transparent"
-            >
-              <option value="">All Statuses</option>
-              <option value="new">New</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
-            
-            {/* Sort By */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2
-               focus:ring-blue-500/50 focus:border-transparent"
-            >
-              <option value="created_at">Newest First</option>
-              <option value="hearts_count">Most Hearts</option>
-              <option value="updated_at">Recently Updated</option>
-            </select>
-            
-            {/* Sort Order */}
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <h1 className="font-amiamie text-3xl sm:text-4xl lg:text-5xl text-primary">
+              Bug reports
+            </h1>
             <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              onClick={() => router.push('/dashboard/bug-report/submit')}
+              className="px-5 py-2.5 bg-invert text-invert text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             >
-              {sortOrder === 'desc' ? '↓ Desc' : '↑ Asc'}
+              Report a bug
             </button>
           </div>
-          
-          {/* Submit Bug Button */}
-          <button
-            onClick={() => router.push('/dashboard/bug-report/submit')}
-            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-white hover:text-black
-             transition font-medium"
+          <p className="text-secondary text-sm mt-3 max-w-lg">
+            Found or noticed a bug on the page? Report it here so it can get fixed.
+          </p>
+        </header>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 mb-8 text-sm">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as any);
+              setCurrentPage(1);
+            }}
+            className="px-3 py-2 bg-background border border-default text-primary focus:outline-none focus:border-accent"
           >
-            + Report Bug
+            <option value="">All statuses</option>
+            <option value="new">New</option>
+            <option value="in_progress">In progress</option>
+            <option value="resolved">Resolved</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 bg-background border border-default text-primary focus:outline-none focus:border-accent"
+          >
+            <option value="created_at">Newest first</option>
+            <option value="hearts_count">Most hearts</option>
+            <option value="updated_at">Recently updated</option>
+          </select>
+
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="px-3 py-2 border border-default text-secondary hover:text-primary transition-colors flex items-center gap-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+          >
+            <ArrowUpDown order={sortOrder} />
+            {sortOrder === 'desc' ? 'Desc' : 'Asc'}
           </button>
         </div>
-        
-        {/* Loading State */}
+
+        {/* Loading */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading bug reports...</p>
+          <div className="py-16 border-t border-default text-center">
+            <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted mb-3">
+              Loading
+            </p>
+            <div className="h-[2px] w-32 bg-border mx-auto relative overflow-hidden">
+              <div className="absolute inset-y-0 left-0 w-1/3 bg-accent animate-pulse" />
+            </div>
           </div>
         )}
-        
-        {/* Error State */}
+
+        {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-700">{error}</p>
+          <div className="pt-4 pb-6 mb-6 border-t border-danger">
+            <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-danger mb-1">
+              Error
+            </p>
+            <p className="text-sm text-secondary mb-2">{error}</p>
             <button
               onClick={fetchBugs}
-              className="mt-2 text-red-600 hover:text-red-800 font-medium"
+              className="text-sm text-primary underline decoration-border underline-offset-4 hover:text-accent"
             >
-              Try Again
+              Try again
             </button>
           </div>
         )}
-        
-        {/* Bug List */}
+
+        {/* Empty */}
         {!loading && bugs.length === 0 && (
-          <div className="text-center py-12 bg-gray-100 rounded-lg shadow-sm">
-            <p className="text-gray-600 text-lg">No bugs found</p>
-            <p className="text-gray-500 mt-2">
-              {statusFilter ? 'Try changing the filter' : 'Be the first to report a bug!'}
+          <div className="py-16 border-t border-default text-center">
+            <p className="text-primary text-base mb-1">No bugs found</p>
+            <p className="text-muted text-sm">
+              {statusFilter ? 'Try changing the filter.' : 'Be the first to report one.'}
             </p>
           </div>
         )}
-        
+
+        {/* List */}
         {!loading && bugs.length > 0 && (
-          <div className="space-y-2">
-            {bugs.map((bug) => (
-              <div
-                key={bug.id}
-                className="bg-gray-100 rounded-lg p-6 cursor-pointer"
-                onClick={() => router.push(`/dashboard/bug-report/${bug.id}`)}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  {/* Main Content */}
-                  <div className="flex-1">
-                    {/* Title & Badges */}
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {bug.title}
-                      </h3>
-                      
-                      {/* Status Badge */}
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          bug.status
-                        )}`}
-                      >
-                        {bug.status.replace('_', ' ')}
-                      </span>
-                      
-                      {/* Priority Badge */}
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded ${getPriorityColor(
-                          bug.priority
-                        )}`}
-                      >
-                        {bug.priority}
-                      </span>
+          <div className="border-t border-default">
+            {bugs.map((bug) => {
+              const status = STATUS_META[bug.status] || { label: bug.status, className: 'text-muted' };
+              const priority = PRIORITY_META[bug.priority] || { label: bug.priority, className: 'text-muted' };
+
+              return (
+                <div
+                  key={bug.id}
+                  className="border-b border-default py-6 cursor-pointer group"
+                  onClick={() => router.push(`/dashboard/bug-report/${bug.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <h3 className="text-base font-medium text-primary group-hover:text-accent transition-colors">
+                          {bug.title}
+                        </h3>
+                        <span className={`inline-flex items-center gap-1.5 font-[ArchivoBlack] text-[10px] tracking-[0.1em] uppercase ${status.className}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          {status.label}
+                        </span>
+                        <span className={`font-[ArchivoBlack] text-[10px] tracking-[0.1em] uppercase ${priority.className}`}>
+                          {priority.label}
+                        </span>
+                      </div>
+
+                      <p className="text-secondary text-sm mb-3">
+                        {truncate(bug.description, 150)}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                        <span>Reported by {getReporterName(bug.user_email)}</span>
+                        <span>·</span>
+                        <span>{formatDate(bug.created_at)}</span>
+                        {bug.comments_count > 0 && (
+                          <>
+                            <span>·</span>
+                            <span>{bug.comments_count} {bug.comments_count === 1 ? 'reply' : 'replies'}</span>
+                          </>
+                        )}
+                        {bug.browser && (
+                          <>
+                            <span>·</span>
+                            <span>{bug.browser}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    
-                    {/* Description */}
-                    <p className="text-gray-600 mb-3">
-                      {truncate(bug.description, 150)}
-                    </p>
-                    
-                    {/* Meta Info */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                      <span>Reported by {getReporterName(bug.user_email)}</span>
-                      <span>•</span>
-                      <span>{formatDate(bug.created_at)}</span>
-                      {bug.comments_count > 0 && (
-                        <>
-                          <span>•</span>
-                          <span>💬 {bug.comments_count} replies</span>
-                        </>
+
+                    {/* Heart */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleHeartToggle(bug.id);
+                      }}
+                      className="flex flex-col items-center gap-1 flex-shrink-0 pt-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
+                    >
+                      {bug.user_has_hearted ? (
+                        <Icon icon="pixel:heart-solid" width="20" height="20" className="text-danger" />
+                      ) : (
+                        <Icon icon="pixelarticons:heart" width="20" height="20" className="text-muted" />
                       )}
-                      {bug.browser && (
-                        <>
-                          <span>•</span>
-                          <span>{bug.browser}</span>
-                        </>
-                      )}
-                    </div>
+                      <span className="text-xs text-muted">{bug.hearts_count}</span>
+                    </button>
                   </div>
-                  
-                  {/* Heart Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent card click
-                      handleHeartToggle(bug.id);
-                    }}
-                  >
-                    <span className="text-2xl">
-                      {bug.user_has_hearted ? <Icon icon="pixel:heart-solid" width="24" height="24"
-                        className="text-[#ca0600]" />:
-                       <Icon icon="pixelarticons:heart" width="24" height="24"  className="text-gray-400" />}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {bug.hearts_count}
-                    </span>
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-        
+
         {/* Pagination */}
         {totalBugs > pageSize && (
-          <div className="mt-8 flex items-center justify-center gap-4">
+          <div className="mt-10 flex items-center justify-center gap-6 text-sm">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+              className="text-secondary hover:text-primary disabled:text-muted disabled:cursor-not-allowed transition-colors"
             >
               Previous
             </button>
-            
-            <span className="text-gray-600">
-              Page {currentPage} of {Math.ceil(totalBugs / pageSize)}
+
+            <span className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted">
+              Page {currentPage} of {totalPages}
             </span>
-            
+
             <button
-              onClick={() =>
-                setCurrentPage((p) => Math.min(Math.ceil(totalBugs / pageSize), p + 1))
-              }
-              disabled={currentPage >= Math.ceil(totalBugs / pageSize)}
-              className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="text-secondary hover:text-primary disabled:text-muted disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>

@@ -154,7 +154,7 @@ useEffect(() => {
 
   
 return (
-  <aside className={`${isCollapsed ? 'w-20' : 'w-full lg:w-64'} bg-surface border-r border-default
+  <aside className={`${isCollapsed ? 'w-17' : 'w-full lg:w-64'} bg-gray-100 border-r border-default
          flex flex-col h-full transition-all duration-300 ease-in-out`}>      
     {/* LOGO at top */}
     <div className="p-4 border-default flex items-center justify-between">
@@ -225,8 +225,8 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="streamline-freehand-color:home-chimney-2"
-            width="24" height="24" /></span>
+            <span><Icon icon="solar:home-broken"
+            width="18" height="18" /></span>
             {!isCollapsed && <span ref={addNavRef(0)}>Home</span>}
           </Link>
 
@@ -239,7 +239,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="twemoji:computer-disk" width="28" height="28" /></span>
+            <span><Icon icon="streamline-freehand:cd-player-disc" width="18" height="18" /></span>
             {!isCollapsed && <span ref={addNavRef(1)}>Models</span>}
           </Link>
         </div>
@@ -259,8 +259,8 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="ri:text-to-speech-line"
-             width="25" height="25" className="color: #997aca" /></span>
+            <span><Icon icon="iconoir:voice"
+             width="18" height="18" className="color: #997aca" /></span>
             {!isCollapsed && <span ref={addNavRef(2)}>Text to Speech</span>}
           </Link>
 
@@ -272,7 +272,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="arcticons:landroid" width="28" height="28" /></span>
+            <span><Icon icon="dinkie-icons:android" width="18" height="18" /></span>
             {!isCollapsed && <span ref={addNavRef(3)}>Agents</span>}
           </Link>
 
@@ -284,7 +284,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="mdi:text-to-speech-off" width="24" height="24" className="color: #2a2d6f" /></span>
+            <span><Icon icon="streamline-freehand:voice-id-user" width="18" height="18" className="color: #2a2d6f" /></span>
             {!isCollapsed && <span ref={addNavRef(4)}>Speech to Text</span>}
           </Link>
         </div>
@@ -305,20 +305,20 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="noto:cyclone" width="22" height="22" /></span>
+            <span><Icon icon="streamline-pixel:interface-essential-voice-id" width="18" height="18" /></span>
             {!isCollapsed && <span ref={addNavRef(5)}>Voice Cloning</span>}
           </Link>
           
           <Link 
-            href="/dashboard/dubbing"
+            href="#"
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition-colors mb-1 ${
               isActive('/dashboard/dubbing') 
                 ? 'bg-gray-100 text-secondary' 
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="file-icons:dub" width="25" height="25" className="color: #2a2d6f" /></span>
-            {!isCollapsed && <span ref={addNavRef(6)}>Dubbing</span>}
+            <span><Icon icon="arcticons:avatar-world" width="18" height="18" className="color: #2a2d6f" /></span>
+            {!isCollapsed && <span ref={addNavRef(6)}>Visage Studio</span>}
           </Link>
 
           <Link 
@@ -329,7 +329,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="marketeq:bug" width="28" height="25" className="color: #828282" /></span>
+            <span><Icon icon="solar:bug-broken" width="18" height="18" className="color: #828282" /></span>
             {!isCollapsed && <span ref={addNavRef(7)}>Report Bug</span>}
           </Link>
 
@@ -344,8 +344,8 @@ return (
             <span className="relative">
               <Icon 
                 icon="solar:bell-broken" 
-                width="24" 
-                height="24" 
+                width="19" 
+                height="19" 
                 className={`${unreadCount > 0 ? 'animate-bell-shake' : ''}`}
               />
               {/* Red badge with unread count */}
@@ -365,7 +365,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="solar:history-2-broken" width="24" height="24" className=" #e8be3e" /></span>
+            <span><Icon icon="solar:history-2-broken" width="19" height="19" className=" #e8be3e" /></span>
             {!isCollapsed && <span ref={addNavRef(9)}>History</span>}
           </Link>
 
@@ -377,7 +377,7 @@ return (
                 : 'text-secondary hover:bg-gray-100'
             }`}
           >
-            <span><Icon icon="streamline-freehand:credit-card-payment" width="24" height="24" className=" #e8be3e" /></span>
+            <span><Icon icon="streamline-freehand:credit-card-payment" width="19" height="19" className=" #e8be3e" /></span>
             {!isCollapsed && <span ref={addNavRef(9)}>Payment History</span>}
           </Link>
 

@@ -17,6 +17,22 @@ interface SupportChatWidgetProps {
 
 type Position = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
+function ThumbUp({ active }: { active: boolean }) {
+  return (
+    <svg className="w-4 h-4" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M14.25 9h2.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 01-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 00-1.302 4.665c0 1.194.232 2.333.654 3.375z" />
+    </svg>
+  );
+}
+
+function ThumbDown({ active }: { active: boolean }) {
+  return (
+    <svg className="w-4 h-4" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 15h2.25m8.024-9.75c.011.05.028.1.052.148.591 1.2.924 2.55.924 3.977a8.96 8.96 0 01-.999 4.125m.023-8.25c-.076-.365.183-.75.575-.75h.908c.889 0 1.713.518 1.972 1.368.339 1.11.521 2.287.521 3.507 0 1.553-.295 3.036-.831 4.398C20.613 13.797 19.833 14.25 19 14.25h-1.053c-.472 0-.745-.556-.5-.96a8.95 8.95 0 00.303-.54m.023-8.25H16.48a4.5 4.5 0 01-1.423-.23l-3.114-1.04a4.5 4.5 0 00-1.423-.23H6.504c-.618 0-1.217.247-1.605.729A11.95 11.95 0 002.25 12c0 .434.023.863.068 1.285C2.427 14.306 3.346 15 4.372 15h3.126c.618 0 .991.724.725 1.282A7.471 7.471 0 007.5 19.5a2.25 2.25 0 002.25 2.25.75.75 0 00.75-.75v-.633c0-.573.11-1.14.322-1.672.304-.76.93-1.33 1.653-1.715a9.04 9.04 0 002.86-2.4c.498-.634 1.226-1.08 2.032-1.08z" />
+    </svg>
+  );
+}
+
 export default function SupportChatWidget({ 
   isOpen: externalIsOpen, 
   onToggle: externalOnToggle 
@@ -213,7 +229,7 @@ export default function SupportChatWidget({
         const escalationMsg: ChatMessage = {
           id: `escalation-${Date.now()}`,
           role: 'bot',
-          message: `✅ Support ticket #${response.ticket_id.substring(0, 8)} created. Check your email for updates!`,
+          message: `Support ticket #${response.ticket_id.substring(0, 8)} created. Check your email for updates.`,
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, escalationMsg]);
@@ -291,7 +307,7 @@ export default function SupportChatWidget({
             opacity: isDragging ? 0.7 : 1,
             transition: isDragging ? 'none' : 'all 0.3s ease'
           }}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg hover:scale-110 z-50 select-none"
+          className="bg-invert text-invert rounded-full p-4 hover:opacity-90 z-50 select-none"
           aria-label="Open support chat"
         >
           <svg
@@ -314,21 +330,23 @@ export default function SupportChatWidget({
       {isOpen && (
         <div 
           style={getChatWindowStyles()}
-          className="lg:w-96 w-[calc(100vw-48px)] max-w-96 h-[600px] max-h-[80vh] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200"
+          className="lg:w-96 w-[calc(100vw-48px)] max-w-96 h-[600px] max-h-[80vh] bg-surface flex flex-col z-50 border border-default"
         >
           {/* Header */}
-          <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+          <div className="bg-invert text-invert p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 rounded-full bg-accent"></div>
               <div>
-                <h3 className="font-semibold">Lyvo Support</h3>
-                <p className="text-xs text-blue-100">AI Assistant • Online</p>
+                <h3 className="font-amiamie text-base">Lyvo Support</h3>
+                <p className="font-[ArchivoBlack] text-[9px] tracking-[0.15em] uppercase opacity-70">
+                  AI Assistant · Online
+                </p>
               </div>
             </div>
             
             <button
               onClick={toggleOpen}
-              className="text-white hover:bg-blue-700 rounded-full p-1 transition"
+              className="opacity-80 hover:opacity-100 p-1 transition-opacity"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -337,57 +355,59 @@ export default function SupportChatWidget({
           </div>
           
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
+                  className={`max-w-[80%] p-3 ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-800 border border-gray-200'
+                      ? 'bg-invert text-invert'
+                      : 'bg-surface text-primary border border-default'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                   
                   <p
                     className={`text-xs mt-1 ${
-                      msg.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                      msg.role === 'user' ? 'opacity-70' : 'text-muted'
                     }`}
                   >
                     {formatTime(msg.created_at)}
                   </p>
                   
                   {msg.role === 'bot' && msg.id !== 'welcome' && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-                      <span className="text-xs text-gray-500">Helpful?</span>
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-default">
+                      <span className="text-xs text-muted">Helpful?</span>
                       <button
                         onClick={() => handleFeedback(msg.id, true)}
                         disabled={msg.was_helpful !== undefined}
-                        className={`text-lg transition ${
+                        className={`transition-colors ${
                           msg.was_helpful === true
-                            ? 'opacity-100'
+                            ? 'text-accent'
                             : msg.was_helpful === false
-                            ? 'opacity-30'
-                            : 'opacity-50 hover:opacity-100'
+                            ? 'text-muted opacity-40'
+                            : 'text-muted hover:text-accent'
                         }`}
+                        aria-label="Mark as helpful"
                       >
-                        👍
+                        <ThumbUp active={msg.was_helpful === true} />
                       </button>
                       <button
                         onClick={() => handleFeedback(msg.id, false)}
                         disabled={msg.was_helpful !== undefined}
-                        className={`text-lg transition ${
+                        className={`transition-colors ${
                           msg.was_helpful === false
-                            ? 'opacity-100'
+                            ? 'text-danger'
                             : msg.was_helpful === true
-                            ? 'opacity-30'
-                            : 'opacity-50 hover:opacity-100'
+                            ? 'text-muted opacity-40'
+                            : 'text-muted hover:text-danger'
                         }`}
+                        aria-label="Mark as not helpful"
                       >
-                        👎
+                        <ThumbDown active={msg.was_helpful === false} />
                       </button>
                     </div>
                   )}
@@ -397,19 +417,19 @@ export default function SupportChatWidget({
             
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <div className="bg-surface border border-default p-3">
                   <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
             )}
             
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="pt-3 border-t border-danger">
+                <p className="text-sm text-secondary">{error}</p>
               </div>
             )}
             
@@ -417,7 +437,7 @@ export default function SupportChatWidget({
           </div>
           
           {/* Input */}
-          <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+          <div className="p-4 border-t border-default bg-surface">
             <div className="flex gap-2">
               <textarea
                 ref={inputRef}
@@ -426,14 +446,14 @@ export default function SupportChatWidget({
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message..."
                 rows={2}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                className="flex-1 bg-transparent border-b border-default focus:border-accent focus:outline-none resize-none text-sm text-primary placeholder:text-muted px-1 pb-1"
                 disabled={isTyping}
               />
               
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isTyping}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 rounded-lg transition"
+                className="bg-invert text-invert disabled:bg-border disabled:text-muted disabled:cursor-not-allowed px-4 hover:opacity-90 transition-opacity"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -441,8 +461,8 @@ export default function SupportChatWidget({
               </button>
             </div>
             
-            <p className="text-xs text-gray-500 mt-2">
-              Press Enter to send • Shift+Enter for new line
+            <p className="text-xs text-muted mt-2">
+              Press Enter to send · Shift+Enter for new line
             </p>
           </div>
         </div>

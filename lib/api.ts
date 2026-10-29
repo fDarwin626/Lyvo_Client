@@ -2545,6 +2545,157 @@ export async function extractAudioFromVideo(
   return response.json();
 }
 
+// ========== SADTALKER (AVATAR VIDEO) INTERFACES ==========
+
+export interface AvatarGenerationResponse {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  credit_used: number;
+}
+
+export interface AvatarGenerationStatus {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  result_video_url: string | null;
+  credit_used: number;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface AvatarHistoryItem {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  result_video_url: string | null;
+  enhancer: boolean;
+  credit_used: number;
+  created_at: string;
+}
+
+export interface GenerateAvatarParams {
+  photo: File;
+  drivingVideo: File;
+  enhancer?: boolean;
+}
+
+// ========== SADTALKER (AVATAR VIDEO) API FUNCTIONS ==========
+
+/**
+ * 🎭 Generate a talking-head avatar video from a photo + audio.
+ * Audio can come from a fresh TTS generation, an existing history item,
+ * or a user-uploaded file (frontend must trim to ≤10s before calling —
+ * backend enforces a hard 10s cap regardless).
+ * Returns immediately; poll status for completion.
+ */
+export async function generateAvatar(
+  params: GenerateAvatarParams
+): Promise<AvatarGenerationResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+
+
+  const formData = new FormData();
+  formData.append('photo', params.photo);
+  formData.append('driving_video', params.drivingVideo);
+  formData.append('enhancer', (params.enhancer ?? false).toString());
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}/sadtalker/generate`, {
+  method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+
+  if (response.status === 402) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Insufficient credits', 402);
+  }
+
+  if (response.status === 403) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Enhancer requires premium', 403);
+  }
+
+  if (response.status === 429) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Daily generation limit reached', 429);
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Avatar generation failed', response.status);
+  }
+
+  return response.json();
+}
+
+/**
+ * 📊 Check avatar generation status (poll target)
+ */
+export async function checkAvatarStatus(
+  jobId: string
+): Promise<AvatarGenerationStatus> {
+  return apiCall<AvatarGenerationStatus>(
+    `/sadtalker/generation/${jobId}/status`,
+    {},
+    true
+  );
+}
+
+/**
+ * ⏳ Poll until avatar generation is complete (same pattern as waitForExtraction)
+ */
+export async function waitForAvatarGeneration(
+  jobId: string,
+  onProgress?: (status: AvatarGenerationStatus) => void,
+  pollInterval: number = 3000,
+  maxAttempts: number = 200
+): Promise<AvatarGenerationStatus> {
+  let attempts = 0;
+
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      attempts++;
+
+      try {
+        const status = await checkAvatarStatus(jobId);
+
+        if (onProgress) {
+          onProgress(status);
+        }
+
+        if (status.status === 'completed') {
+          clearInterval(interval);
+          resolve(status);
+        } else if (status.status === 'failed') {
+          clearInterval(interval);
+          reject(new APIError(status.error_message || 'Avatar generation failed', 500));
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          reject(new APIError('Avatar generation timeout - please try again', 408));
+        }
+      } catch (error) {
+        clearInterval(interval);
+        reject(error);
+      }
+    }, pollInterval);
+  });
+}
+
+/**
+ * 📜 Get user's avatar generation history
+ */
+export async function getAvatarHistory(): Promise<AvatarHistoryItem[]> {
+  return apiCall<AvatarHistoryItem[]>('/sadtalker/history', {}, true);
+}
+
 /**
  * 📊 Check extraction status (poll target)
  */
@@ -2612,4 +2763,100 @@ export async function deleteMediaExtraction(extractionId: string): Promise<void>
   await apiCall<void>(`/media/generation/${extractionId}`, {
     method: 'DELETE',
   }, true);
+}
+/**
+ * 🗑️ Delete an avatar generation (user must own it)
+ */
+export async function deleteAvatarGeneration(jobId: string): Promise<void> {
+  await apiCall<void>(`/sadtalker/generation/${jobId}`, {
+    method: 'DELETE',
+  }, true);
+}
+
+// ========== SCHEDULED AVATAR GENERATION (one global slot) ==========
+
+export interface ScheduleAvatarResponse {
+  id: string;
+  fires_at: string;
+  credit_used: number;
+}
+
+export interface ScheduleStatus {
+  slot_filled: boolean;
+  is_own: boolean;
+  fires_at: string | null;
+  quota_remaining_seconds: number;
+}
+
+/**
+ * ⏰ Queue an avatar generation to auto-fire the moment GPU quota resets.
+ * Only succeeds if no slot is currently taken (409 if one is) — check
+ * getScheduleStatus() first to show the right UI state before calling.
+ * Same params shape as generateAvatar, minus enhancer's premium check
+ * happening here too (backend still enforces it).
+ */
+export async function scheduleAvatar(
+  params: GenerateAvatarParams
+): Promise<ScheduleAvatarResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new APIError('Authentication required', 401);
+  }
+
+  const formData = new FormData();
+  formData.append('photo', params.photo);
+  formData.append('driving_video', params.drivingVideo);
+  formData.append('enhancer', (params.enhancer ?? false).toString());
+
+  const response = await fetchWithTimeout(`${API_BASE_URL}/sadtalker/schedule`, {
+  method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new APIError('Session expired', 401);
+  }
+
+  if (response.status === 402) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Insufficient credits', 402);
+  }
+
+  if (response.status === 403) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Enhancer requires premium', 403);
+  }
+
+  if (response.status === 409) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Oops! Slot filled try again later', 409);
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new APIError(error.detail || 'Scheduling failed', response.status);
+  }
+
+  return response.json();
+}
+
+/**
+ * ❌ Cancel your own scheduled generation. Releases the held credits.
+ */
+export async function unscheduleAvatar(): Promise<{ status: string; message: string }> {
+  return apiCall<{ status: string; message: string }>('/sadtalker/schedule', {
+    method: 'DELETE',
+  }, true);
+}
+
+/**
+ * 📊 Poll target for the resting screen — is a slot taken, is it mine,
+ * and when does it (or the quota window) fire.
+ */
+export async function getScheduleStatus(): Promise<ScheduleStatus> {
+  return apiCall<ScheduleStatus>('/sadtalker/schedule/status', {}, true);
 }

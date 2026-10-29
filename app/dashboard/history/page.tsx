@@ -7,7 +7,8 @@ import { getUserTTSHistory, getUserAudiobooks, getMyClones,
     deleteAudiobook, deleteGeneration, getTranscriptionHistory,
     deleteTranscription, downloadTranscription, 
     getAudioUrl, getMediaExtractionHistory, deleteMediaExtraction,
-    MediaExtractionHistoryItem} from "@/lib/api";    
+    MediaExtractionHistoryItem, getAvatarHistory, AvatarHistoryItem,
+    deleteAvatarGeneration} from "@/lib/api";
 import { Icon } from "@iconify/react";
 import AudioPlayer from "@/components/AudioPlayer";
 
@@ -17,19 +18,23 @@ function HistoryPage() {
     const [audiobooks, setAudiobooks] = useState<AudiobookJob[]>([]);
     const [clones, setClones] = useState<ClonedVoice[]>([]);
     
-const [transcriptions, setTranscriptions] = useState<any[]>([]);
+    const [transcriptions, setTranscriptions] = useState<any[]>([]);    
     const [mediaExtractions, setMediaExtractions] = useState<MediaExtractionHistoryItem[]>([]);
+    const [avatarVideos, setAvatarVideos] = useState<AvatarHistoryItem[]>([]);
     
     const [loadingTTS, setLoadingTTS] = useState(true);
     const [loadingAudiobooks, setLoadingAudiobooks] = useState(true);
     const [loadingClones, setLoadingClones] = useState(true);
     const [loadingTranscriptions, setLoadingTranscriptions] = useState(true);
     const [loadingMedia, setLoadingMedia] = useState(true);
+    const [loadingAvatars, setLoadingAvatars] = useState(true);
 
     // Audio Player State
     const [playingAudio, setPlayingAudio] = useState<{ url: string; name: string } | null>(null);
     const [showPlayer, setShowPlayer] = useState(false);
-    
+
+    // Video Player State (Visage Studio avatar generations)
+    const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);    
     // View Text Modal State
     const [viewTextModal, setViewTextModal] = useState<{ show: boolean; text: string; title: string } | null>(null);
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -40,8 +45,8 @@ const [transcriptions, setTranscriptions] = useState<any[]>([]);
         fetchClones();
         fetchTranscriptions();
         fetchMediaExtractions();
+        fetchAvatarVideos();
     }, []);
-
     async function fetchTTSHistory() {
         try {
             const data = await getUserTTSHistory();
@@ -96,7 +101,19 @@ const [transcriptions, setTranscriptions] = useState<any[]>([]);
             setLoadingMedia(false);
         }
     }
-// ========== AUDIO PLAYER FUNCTIONS ==========
+
+    async function fetchAvatarVideos() {
+        try {
+            const data = await getAvatarHistory();
+            setAvatarVideos(data);
+        } catch (error) {
+            console.error("Failed to load avatar videos:", error);
+        } finally {
+            setLoadingAvatars(false);
+        }
+    }
+
+    // ========== AUDIO PLAYER FUNCTIONS ==========
 const handlePlay = (audioUrl: string, name: string) => {
     // Pass the relative URL directly - AudioPlayer will convert it
     setPlayingAudio({ url: audioUrl, name });
@@ -244,6 +261,27 @@ const handleDeleteMedia = async (id: string) => {
     }
 };
 
+const handleDeleteAvatarVideo = async (id: string) => {
+    if (!confirm("Delete this video? This cannot be undone.")) {
+        return;
+    }
+
+    try {
+        await deleteAvatarGeneration(id);
+        fetchAvatarVideos();
+        alert("Video deleted successfully ✅");
+    } catch (error: any) {
+        console.error("Delete failed:", error);
+
+        if (error.statusCode === 403) {
+            alert("❌ You don't have permission to delete this");
+        } else if (error.statusCode === 404) {
+            alert("❌ Video not found");
+        } else {
+            alert(error.message || "❌ Failed to delete video");
+        }
+    }
+};
     return (
         <ProtectedRoute>
             <div 
@@ -629,11 +667,132 @@ const handleDeleteMedia = async (id: string) => {
                 </div>
 
 
+{/* ========== SECTION: VISAGE STUDIO (AVATAR VIDEOS) ========== */}
+                <div className="mb-12">
+                    <h2 className="text-2xl font-amiamie font-bold mb-4">Visage Studio Videos</h2>
+
+                    {loadingAvatars ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="rounded-2xl bg-gray-100 animate-pulse" style={{ aspectRatio: "9/16" }} />
+                            ))}
+                        </div>
+                    ) : avatarVideos.length === 0 ? (
+                        <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
+                            <Icon icon="solar:clapperboard-play-broken" width="64" height="64" className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-600 text-lg mb-4">No videos created yet</p>
+                            <a href="/dashboard/visage-studio">
+                                <button className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800">
+                                    Create Your First Video
+                                </button>
+                            </a>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {avatarVideos.map((job) => (
+                                <div
+                                    key={job.id}
+                                    className="relative rounded-2xl overflow-hidden border border-gray-200 bg-black"
+                                    style={{ aspectRatio: "9/16" }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {job.status === "completed" && job.result_video_url ? (
+                                        <video
+                                            src={job.result_video_url}
+                                            className="w-full h-full object-cover"
+                                            muted
+                                            playsInline
+                                            onClick={() => setPlayingVideoUrl(job.result_video_url)}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Icon
+                                                icon={job.status === "failed" ? "solar:danger-triangle-broken" : "svg-spinners:ring-resize"}
+                                                width="28"
+                                                height="28"
+                                                className="text-white/60"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {job.status === "processing" && (
+                                        <span className="absolute top-2 left-2 bg-yellow-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                                            Processing…
+                                        </span>
+                                    )}
+                                    {job.status === "failed" && (
+                                        <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                                            Failed
+                                        </span>
+                                    )}
+                                    {job.enhancer && job.status === "completed" && (
+                                        <span className="absolute top-2 right-2 bg-white/90 text-black text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                            <Icon icon="fluent:premium-20-regular" width="10" height="10" />
+                                            Enhanced
+                                        </span>
+                                    )}
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenDropdown(openDropdown === `avatar-${job.id}` ? null : `avatar-${job.id}`);
+                                        }}
+                                        className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+                                    >
+                                        <Icon icon="mdi:dots-horizontal" width="16" height="16" />
+                                    </button>
+
+                                    <div
+                                        className={`absolute bottom-11 right-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px] transition-all z-10 ${
+                                            openDropdown === `avatar-${job.id}` ? "opacity-100 visible" : "opacity-0 invisible"
+                                        }`}
+                                    >
+                                        {job.status === "completed" && job.result_video_url && (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        setPlayingVideoUrl(job.result_video_url);
+                                                        setOpenDropdown(null);
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <Icon icon="mdi:play-circle" width="16" height="16" />
+                                                    Play
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        handleDownload(job.result_video_url as string, `visage-${job.id}.mp4`);
+                                                        setOpenDropdown(null);
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                >
+                                                    <Icon icon="mdi:download" width="16" height="16" />
+                                                    Download
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                handleDeleteAvatarVideo(job.id);
+                                                setOpenDropdown(null);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                        >
+                                            <Icon icon="mdi:delete" width="16" height="16" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 {/* ========== SECTION 3: CLONED VOICES ========== */}
                 <div className="mb-12">
                     {/* Banner at Top */}
                     <div className="bg-gradient-to-r from-slate-700 via-blue-600 to-teal-600 rounded-2xl p-8 mb-6 
-                    text-white relative overflow-hidden">
+                    text-white relative overflow-hidden">                        
                         <div className="relative z-10">
                             <h2 className="text-3xl  font-amiamie font-bold mb-2">Your Cloned Voices</h2>
                             <p className="text-white/90">
@@ -941,7 +1100,7 @@ const handleDeleteMedia = async (id: string) => {
             </div>
             
 
-            {/* Audio Player (Bottom Floating) */}
+{/* Audio Player (Bottom Floating) */}
             {showPlayer && playingAudio && (
                 <AudioPlayer
                     audioUrl={playingAudio.url}
@@ -950,6 +1109,23 @@ const handleDeleteMedia = async (id: string) => {
                 />
             )}
 
+            {/* Video Playback Modal (Visage Studio avatar videos) */}
+            {playingVideoUrl && (
+                <div
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+                    onClick={() => setPlayingVideoUrl(null)}
+                >
+                    <div className="relative max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+                        <video src={playingVideoUrl} controls autoPlay className="w-full rounded-2xl" />
+                        <button
+                            onClick={() => setPlayingVideoUrl(null)}
+                            className="absolute -top-10 right-0 text-white"
+                        >
+                            <Icon icon="mdi:close" width="28" height="28" />
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* View Text Modal */}
             {viewTextModal?.show && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"

@@ -3,16 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Sparkles, Zap, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { 
-  getUserProfile, 
-  initializePayment, 
+import {
+  getUserProfile,
+  initializePayment,
   verifyPayment,
   calculateCreditsFromAmount,
   formatAmount,
   APIError,
   UserProfile
 } from '@/lib/api';
-import { 
+import {
   canPurchaseTestCredits,
   recordTestPurchase,
   formatNextEligibleDate,
@@ -43,13 +43,13 @@ interface Plan {
 
 export default function PricingPage() {
   const router = useRouter();
-  
+
   // State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [currency, setCurrency] = useState<'NGN' | 'USD'>('USD'); 
+  const [currency, setCurrency] = useState<'NGN' | 'USD'>('USD');
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
   const [amountError, setAmountError] = useState<string>('');
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -86,7 +86,7 @@ export default function PricingPage() {
     }
 
     const amountInCents = Math.round(parseFloat(customAmount) * 100);
-    
+
     if (isNaN(amountInCents) || amountInCents <= 0) {
       setAmountError('Please enter a valid amount');
       setCalculatedCredits(0);
@@ -94,7 +94,7 @@ export default function PricingPage() {
     }
 
     const result = calculateCreditsFromAmount(amountInCents, currency);
-    
+
     if (result.valid) {
       setCalculatedCredits(result.credits);
       setAmountError('');
@@ -118,7 +118,7 @@ export default function PricingPage() {
 
     // ✅ TEST MODE: Check rate limit eligibility
     const eligibility = canPurchaseTestCredits(userProfile?.total_credits || 0);
-    
+
     if (!eligibility.allowed) {
       // Show rate limit warning
       setShowRateLimitWarning(true);
@@ -134,7 +134,7 @@ export default function PricingPage() {
 
     try {
       const amountInCents = Math.round(parseFloat(customAmount) * 100);
-      
+
       // Initialize payment with backend
       const response = await initializePayment(amountInCents, currency);
 
@@ -146,7 +146,7 @@ export default function PricingPage() {
       }
     } catch (error) {
       console.error('Payment error:', error);
-      
+
       if (error instanceof APIError) {
         alert(`Payment failed: ${error.message}`);
       } else {
@@ -159,8 +159,15 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted mb-3">
+            Loading
+          </p>
+          <div className="h-[2px] w-32 bg-border mx-auto relative overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-1/3 bg-accent animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -174,7 +181,7 @@ export default function PricingPage() {
       price: "0",
       period: "forever",
       tagline: "Perfect to get started",
-      icon: <Zap className="w-6 h-6" />,
+      icon: <Zap className="w-5 h-5" />,
       features: [
         { text: "1,000 free credits on signup", included: true },
         { text: "Monthly credit refill", included: true },
@@ -193,7 +200,7 @@ export default function PricingPage() {
       price: "1.03",
       period: "per 1000 credits",
       tagline: "Unlock full potential",
-      icon: <Sparkles className="w-6 h-6" />,
+      icon: <Sparkles className="w-5 h-5" />,
       badge: "PAY AS YOU GO",
       features: [
         { text: "Buy any amount of credits", included: true },
@@ -210,468 +217,444 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto text-center mb-12 font-amiamie">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Choose Your Plan
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto font-amiamie-round">
-          Unlock more voices, agents, and premium features
-        </p>
-        
-        {/* Current Balance */}
-        {userProfile && (
-          <div className="mt-6 inline-block bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-full">
-            <p className="text-sm text-gray-600">Current Balance</p>
-            <p className="text-2xl font-bold text-purple-700">
-              {userProfile.total_credits.toLocaleString()} credits
-            </p>
-            <p className="text-xs text-gray-500">
-              {userProfile.free_credits} free + {userProfile.paid_credits} paid
-            </p>
-          </div>
-        )}
-      </div>
+    <div className="min-h-screen bg-background pt-16 sm:pt-20 px-4 sm:px-6 pb-16 sm:pb-24">
+      <div className="max-w-4xl mx-auto">
 
-      {/* Pricing Cards */}
-      <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 px-4">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative bg-white rounded-2xl shadow-xl overflow-hidden
-                 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-              plan.isCurrent ? 'ring-2 ring-purple-500' : ''
-            }`}
-          >
-            {/* Badge */}
-            {plan.badge && (
-              <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-500 to-pink-500
-               text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
-                {plan.badge}
-              </div>
-            )}
-            
-            {plan.isCurrent && currentTier === 1 && (
-              <div className="absolute top-0 left-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-br-lg">
-                CURRENT PLAN
-              </div>
-            )}
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="font-[ArchivoBlack] text-[10px] sm:text-[11px] tracking-[0.2em] uppercase text-muted mb-3">
+            Plans
+          </p>
+          <h1 className="font-amiamie text-3xl sm:text-4xl lg:text-5xl text-primary mb-4">
+            Choose your plan
+          </h1>
+          <p className="text-secondary text-base max-w-lg mx-auto">
+            Unlock more voices, agents, and premium features
+          </p>
 
-            {/* Card Header */}
-            <div className={`bg-gradient-to-r ${plan.gradient} p-8 text-white`}>
-              <div className="flex items-center gap-3 mb-4">
-                {plan.icon}
-                <h2 className="text-3xl font-bold font-amiamie">{plan.name}</h2>
-              </div>
-              
-              <div className="flex items-baseline gap-2 mb-2 font-amiamie-round">
-                <span className="text-5xl font-bold">
-                  <span className=''>$</span>{plan.price}
-                </span>
-                <span className="text-sm opacity-90">/ {plan.period}</span>
-              </div>
-              
-              <p className="text-sm opacity-90">{plan.tagline}</p>
+          {/* Current Balance */}
+          {userProfile && (
+            <div className="mt-8 inline-flex flex-col items-center gap-1 pt-6 border-t border-default">
+              <p className="font-[ArchivoBlack] text-[10px] tracking-[0.2em] uppercase text-muted">
+                Current balance
+              </p>
+              <p className="font-amiamie text-3xl text-primary">
+                {userProfile.total_credits.toLocaleString()} credits
+              </p>
+              <p className="text-xs text-muted">
+                {userProfile.free_credits} free + {userProfile.paid_credits} paid
+              </p>
             </div>
+          )}
+        </div>
 
-            {/* Features List */}
-            <div className="p-8">
-              <ul className="space-y-4 mb-8">
+        {/* Pricing Columns */}
+        <div className="border border-default grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+          {plans.map((plan) => (
+            <div key={plan.id} className="p-6 sm:p-8 flex flex-col">
+
+              {/* Plan header */}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2.5 text-primary">
+                  {plan.icon}
+                  <h2 className="font-amiamie text-2xl">{plan.name}</h2>
+                </div>
+                {plan.badge && (
+                  <span className="font-[ArchivoBlack] text-[9px] tracking-[0.15em] uppercase text-accent">
+                    {plan.badge}
+                  </span>
+                )}
+              </div>
+
+              {plan.isCurrent && (
+                <p className="font-[ArchivoBlack] text-[9px] tracking-[0.15em] uppercase text-accent mb-4">
+                  Current plan
+                </p>
+              )}
+              {!plan.isCurrent && <div className="mb-4" />}
+
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="font-amiamie text-4xl text-primary">
+                  ${plan.price}
+                </span>
+                <span className="text-sm text-muted">/ {plan.period}</span>
+              </div>
+
+              <p className="text-sm text-secondary mb-6">{plan.tagline}</p>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3">
+                  <li key={index} className="flex items-start gap-2.5">
                     {feature.included ? (
-                      <Check className={`w-5 h-5 flex-shrink-0 ${feature.isWarning ? 'text-yellow-500' : 'text-green-500'}`} />
+                      <Check className="w-4 h-4 flex-shrink-0 mt-0.5 text-accent" />
                     ) : (
-                      <X className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <X className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted" />
                     )}
-                    <span className={`text-gray-700 ${!feature.included ? 'line-through opacity-50' : ''}`}>
+                    <span className={`text-sm ${feature.included ? 'text-secondary' : 'text-muted line-through'}`}>
                       {feature.text}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              {/* CTA Button */}
+              {/* CTA */}
               {plan.id === 2 ? (
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  className="w-full py-3 px-6 rounded-lg font-semibold text-lg transition-all duration-200
-                    bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:scale-105"
+                  className="w-full py-3 px-6 bg-invert text-invert font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                 >
-                  <CreditCard className="inline w-5 h-5 mr-2" />
+                  <CreditCard className="w-4 h-4" />
                   {plan.buttonText}
                 </button>
               ) : (
                 <button
                   disabled
-                  className="w-full py-3 px-6 rounded-lg font-semibold text-lg
-                    bg-gray-200 text-gray-500 cursor-not-allowed"
+                  className="w-full py-3 px-6 border border-default text-muted font-medium text-sm cursor-not-allowed"
                 >
                   Current Plan
                 </button>
               )}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-gray-500/45 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 relative">
-            {/* Close button */}
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-6 h-6" />
-            </button>
+        {/* Payment Modal */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface border border-default max-w-md w-full p-6 sm:p-8 relative">
+              {/* Close button */}
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="absolute top-4 right-4 text-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* Modal Header */}
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Buy Credits
-              </h2>
-              <p className="text-gray-600 text-sm">
-                Pay as you go - buy exactly what you need
-              </p>
-            </div>
+              {/* Modal Header */}
+              <div className="mb-6">
+                <h2 className="font-amiamie text-2xl text-primary mb-1">
+                  Buy Credits
+                </h2>
+                <p className="text-secondary text-sm">
+                  Pay as you go — buy exactly what you need
+                </p>
+              </div>
 
               {/* Currency Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Currency
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type='button'
-                  onClick={() => {
-                    console.log('🇳🇬 Setting NGN'); // Debug
+              <div className="mb-6">
+                <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted mb-2">
+                  Currency
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log('🇳🇬 Setting NGN'); // Debug
 
-                    setCurrency('NGN');
-                    setCustomAmount('1537.30');
-                  }}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
-                    currency === 'NGN'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  🇳🇬 NGN (Naira)
-                </button>
-                <button
-                  type='button'
+                      setCurrency('NGN');
+                      setCustomAmount('1537.30');
+                    }}
+                    className={`flex-1 py-2.5 px-4 border text-sm font-medium transition-colors ${
+                      currency === 'NGN'
+                        ? 'bg-invert text-invert border-transparent'
+                        : 'border-default text-secondary hover:border-accent'
+                    }`}
+                  >
+                    NGN <span className="opacity-70">(Naira)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log('🇳🇬 Setting NGN'); // Debug
 
-                  onClick={() => {
-                  console.log('🇳🇬 Setting NGN'); // Debug
-
-                    setCurrency('USD');
-                    setCustomAmount('1.03');
-                  }}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
-                    currency === 'USD'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  🇺🇸 USD (Dollar)
-                </button>
+                      setCurrency('USD');
+                      setCustomAmount('1.03');
+                    }}
+                    className={`flex-1 py-2.5 px-4 border text-sm font-medium transition-colors ${
+                      currency === 'USD'
+                        ? 'bg-invert text-invert border-transparent'
+                        : 'border-default text-secondary hover:border-accent'
+                    }`}
+                  >
+                    USD <span className="opacity-70">(Dollar)</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Amount Input */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount ({currency === 'NGN' ? '₦' : '$'})
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                placeholder={currency === 'NGN' ? '1537.30' : '1.03'}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 
-                  focus:outline-none text-lg"
-              />
-              
-              {/* Pricing hint */}
-              <p className="text-xs text-gray-500 mt-1">
-                {currency === 'NGN' ? '₦1,537.30' : '$1.03'} = 1,000 credits
+              {/* Amount Input */}
+              <div className="mb-6">
+                <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted mb-2">
+                  Amount ({currency === 'NGN' ? '₦' : '$'})
+                </p>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder={currency === 'NGN' ? '1537.30' : '1.03'}
+                  className="w-full bg-transparent border-b border-default focus:border-accent focus:outline-none text-primary placeholder:text-muted text-lg pb-2"
+                />
+
+                <p className="text-xs text-muted mt-2">
+                  {currency === 'NGN' ? '₦1,537.30' : '$1.03'} = 1,000 credits
+                </p>
+              </div>
+
+              {/* Credits Preview */}
+              {calculatedCredits > 0 && !amountError && (
+                <div className="mb-6 pt-4 border-t border-accent">
+                  <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-accent mb-1">
+                    You will receive
+                  </p>
+                  <p className="font-amiamie text-3xl text-primary">
+                    {calculatedCredits.toLocaleString()} credits
+                  </p>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {amountError && (
+                <div className="mb-6 pt-4 border-t border-danger flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-danger flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-secondary">{amountError}</p>
+                </div>
+              )}
+
+              {/* Pay Button */}
+              <button
+                onClick={handlePayment}
+                disabled={paymentLoading || !customAmount || !!amountError || calculatedCredits === 0}
+                className="w-full py-3.5 px-6 bg-invert text-invert font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:bg-border disabled:text-muted disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              >
+                {paymentLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Pay {customAmount ? formatAmount(Math.round(parseFloat(customAmount) * 100), currency) : ''}
+                  </>
+                )}
+              </button>
+
+              {/* ✅ TEST MODE: Rate Limit Warning */}
+              {testLimits.lastPurchaseDate && (
+                <div className="mt-4 pt-4 border-t border-default">
+                  <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-accent mb-1">
+                    Test mode active
+                  </p>
+                  <p className="text-xs text-muted">
+                    Next purchase available: {formatNextEligibleDate(testLimits.nextEligibleDate || '')}
+                  </p>
+                  <p className="text-xs text-muted mt-1">
+                    Total test purchases: {testLimits.purchaseCount}
+                  </p>
+                </div>
+              )}
+              {/* REASON: Show user when they can buy again (transparency) */}
+
+              {/* Security Note */}
+              <p className="text-xs text-muted text-center mt-4">
+                Payments secured by Flutterwave
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Test Cards Section */}
+        <div className="mt-16">
+          <div>
+            {/* Header */}
+            <div className="text-center mb-6">
+              <p className="font-[ArchivoBlack] text-[10px] tracking-[0.2em] uppercase text-accent mb-3">
+                Test mode active
+              </p>
+              <h3 className="font-amiamie text-2xl text-primary mb-2">
+                Test cards for Lyvo credits
+              </h3>
+              <p className="text-secondary text-sm sm:text-base">
+                Use these test cards to purchase Lyvo credits in test mode
               </p>
             </div>
 
-            {/* Credits Preview */}
-            {calculatedCredits > 0 && !amountError && (
-              <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                <p className="text-sm text-green-700 mb-1">You will receive:</p>
-                <p className="text-3xl font-bold text-green-700">
-                  {calculatedCredits.toLocaleString()} credits
-                </p>
+            {/* Important Notice */}
+            <div className="border-l-2 border-accent pl-4 py-1 mb-8">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-primary mb-1">
+                    Test mode limitations
+                  </p>
+                  <ul className="text-xs text-secondary space-y-1">
+                    <li>· You can only purchase <span className="text-primary font-medium">once per month</span></li>
+                    <li>· Maximum <span className="text-primary font-medium">1,000 credits</span> per purchase</li>
+                    <li>· No real payment will be charged</li>
+                    <li>· This is for testing purposes only</li>
+                  </ul>
+                </div>
               </div>
-            )}
+            </div>
 
-            {/* Error Message */}
-            {amountError && (
-              <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{amountError}</p>
+            {/* Test Cards Grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Visa Card */}
+              <div className="border border-default p-4 hover:border-accent transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-primary text-sm">Visa Card</h4>
+                  <CreditCard className="w-4 h-4 text-muted" />
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted mb-1">Card Number</p>
+                    <div className="flex items-center justify-between border-b border-default pb-1.5">
+                      <code className="text-xs font-mono text-primary">4187427415564246</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText('4187427415564246');
+                          alert('Card number copied!');
+                        }}
+                        className="text-xs text-secondary hover:text-accent underline decoration-border underline-offset-4"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">CVV</p>
+                      <code className="text-xs font-mono text-primary">828</code>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">PIN</p>
+                      <code className="text-xs font-mono text-primary">3310</code>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted mb-1">Expiry</p>
+                    <code className="text-xs font-mono text-primary">09/32</code>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Pay Button */}
-            <button
-              onClick={handlePayment}
-              disabled={paymentLoading || !customAmount || !!amountError || calculatedCredits === 0}
-              className="w-full py-3 px-6 rounded-lg font-semibold text-lg transition-all duration-200
-                bg-gradient-to-r from-purple-500 to-pink-500 text-white 
-                hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {paymentLoading ? (
-                <>
-                  <Loader2 className="inline w-5 h-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="inline w-5 h-5 mr-2" />
-                  Pay {customAmount ? formatAmount(Math.round(parseFloat(customAmount) * 100), currency) : ''}
-                </>
-              )}
-            </button>
-
-            {/* ✅ TEST MODE: Rate Limit Warning */}
-            {testLimits.lastPurchaseDate && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-800 font-medium">
-                  🧪 Test Mode Active
-                </p>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Next purchase available: {formatNextEligibleDate(testLimits.nextEligibleDate || '')}
-                </p>
-                <p className="text-xs text-yellow-600 mt-1">
-                  Total test purchases: {testLimits.purchaseCount}
-                </p>
+              {/* Mastercard */}
+              <div className="border border-default p-4 hover:border-accent transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-primary text-sm">Mastercard</h4>
+                  <CreditCard className="w-4 h-4 text-muted" />
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted mb-1">Card Number</p>
+                    <div className="flex items-center justify-between border-b border-default pb-1.5">
+                      <code className="text-xs font-mono text-primary">5531886652142950</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText('5531886652142950');
+                          alert('Card number copied!');
+                        }}
+                        className="text-xs text-secondary hover:text-accent underline decoration-border underline-offset-4"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">CVV</p>
+                      <code className="text-xs font-mono text-primary">564</code>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">PIN</p>
+                      <code className="text-xs font-mono text-primary">3310</code>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted mb-1">Expiry</p>
+                    <code className="text-xs font-mono text-primary">09/32</code>
+                  </div>
+                </div>
               </div>
-            )}
-            {/* REASON: Show user when they can buy again (transparency) */}
 
-            {/* Security Note */}
-            <p className="text-xs text-gray-500 text-center mt-4">
-              🔒 Secure payment powered by Flutterwave
-            </p>
+              {/* International USD Card */}
+              <div className="border border-default p-4 hover:border-accent transition-colors sm:col-span-2 lg:col-span-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-primary text-sm">International USD</h4>
+                  <CreditCard className="w-4 h-4 text-muted" />
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted mb-1">Card Number</p>
+                    <div className="flex items-center justify-between border-b border-default pb-1.5">
+                      <code className="text-xs font-mono text-primary">4242424242424242</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText('4242424242424242');
+                          alert('Card number copied!');
+                        }}
+                        className="text-xs text-secondary hover:text-accent underline decoration-border underline-offset-4"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">CVV</p>
+                      <code className="text-xs font-mono text-primary">123</code>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted mb-1">OTP</p>
+                      <code className="text-xs font-mono text-primary">123456</code>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted mb-1">Expiry</p>
+                    <code className="text-xs font-mono text-primary">12/34</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="mt-8 border border-default p-5">
+              <p className="font-[ArchivoBlack] text-[10px] tracking-[0.15em] uppercase text-muted mb-3">
+                How to use
+              </p>
+              <ol className="text-sm text-secondary space-y-1.5 list-decimal list-inside">
+                <li>Click "Buy Credits" button above</li>
+                <li>Enter the amount you want to test (max 1,000 credits worth)</li>
+                <li>Copy and paste any test card details at checkout</li>
+                <li>Complete the test payment flow</li>
+                <li>Your credits will be added instantly</li>
+                <li>OTP for all test payment simply enter 123456</li>
+              </ol>
+              <p className="text-xs text-muted mt-4">
+                Remember: you can only make one test purchase per month.
+              </p>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Test Cards Section */}
-      <div className="max-w-4xl mx-auto mt-16">
-        <div className="">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full mb-3">
-              🧪 TEST MODE ACTIVE
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Test Cards for Lyvo Credits
-            </h3>
-            <p className="text-gray-700 text-sm sm:text-base">
-              Use these test cards to purchase Lyvo credits in test mode
-            </p>
-          </div>
-
-          {/* Important Notice */}
-          <div className="bg-white rounded-lg p-4 mb-6 border-l-4 border-yellow-500">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900 mb-1">
-                  Test Mode Limitations
-                </p>
-                <ul className="text-xs text-gray-700 space-y-1">
-                  <li>• You can only purchase <strong>once per month</strong></li>
-                  <li>• Maximum <strong>1,000 credits</strong> per purchase</li>
-                  <li>• No real payment will be charged</li>
-                  <li>• This is for testing purposes only</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Test Cards Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Visa Card */}
-            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-gray-900">Visa Card</h4>
-                <CreditCard className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
-                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <code className="text-xs font-mono">4187427415564246</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText('4187427415564246');
-                        alert('Card number copied!');
-                      }}
-                      className="text-purple-600 hover:text-purple-700 text-xs"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">CVV</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">828</code>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">PIN</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">3310</code>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
-                  <div className="bg-gray-50 p-2 rounded text-center">
-                    <code className="text-xs font-mono">09/32</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mastercard */}
-            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-gray-900">Mastercard</h4>
-                <CreditCard className="w-5 h-5 text-red-600" />
-              </div>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
-                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <code className="text-xs font-mono">5531886652142950</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText('5531886652142950');
-                        alert('Card number copied!');
-                      }}
-                      className="text-purple-600 hover:text-purple-700 text-xs"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">CVV</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">564</code>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">PIN</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">3310</code>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
-                  <div className="bg-gray-50 p-2 rounded text-center">
-                    <code className="text-xs font-mono">09/32</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* International USD Card */}
-            <div className="bg-white rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-gray-900">International USD</h4>
-                <CreditCard className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Card Number</p>
-                  <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <code className="text-xs font-mono">4242424242424242</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText('4242424242424242');
-                        alert('Card number copied!');
-                      }}
-                      className="text-purple-600 hover:text-purple-700 text-xs"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">CVV</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">123</code>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">OTP</p>
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <code className="text-xs font-mono">123456</code>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Expiry</p>
-                  <div className="bg-gray-50 p-2 rounded text-center">
-                    <code className="text-xs font-mono">12/34</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="mt-6 bg-white rounded-lg p-4">
-            <h4 className="font-semibold text-gray-900 mb-2 text-sm">How to Use:</h4>
-            <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-              <li>Click "Buy Credits" button above</li>
-              <li>Enter the amount you want to test (max 1,000 credits worth)</li>
-              <li>Copy and paste any test card details at checkout</li>
-              <li>Complete the test payment flow</li>
-              <li>Your credits will be added instantly</li>
-              <li>OTP for all test payment simply enter 123456</li>
-
-            </ol>
-            <p className="text-xs text-gray-600 mt-3 italic">
-              💡 Remember: You can only make one test purchase per month.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* FAQ Section */}
-      <div className="max-w-4xl mx-auto mt-16 text-center">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">
-            Need Help Choosing?
+        {/* FAQ Section */}
+        <div className="mt-16 text-center border border-default p-8">
+          <h3 className="font-amiamie text-2xl text-primary mb-3">
+            Need help choosing?
           </h3>
-          <p className="text-gray-600 mb-6">
-            Not sure which plan is right for you? Start with the free tier and upgrade anytime!
+          <p className="text-secondary mb-6">
+            Not sure which plan is right for you? Start with the free tier and upgrade anytime.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <button className="px-6 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
+          <div className="flex flex-wrap justify-center gap-3">
+            <button className="px-6 py-2.5 border border-default text-sm font-medium text-secondary hover:text-primary hover:border-accent transition-colors">
               Contact Support
             </button>
-            <button 
-            onClick={() => router.push("/documentation")}
-            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+            <button
+              onClick={() => router.push("/documentation")}
+              className="px-6 py-2.5 border border-default text-sm font-medium text-secondary hover:text-primary hover:border-accent transition-colors"
+            >
               View Documentation
             </button>
           </div>
